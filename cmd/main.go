@@ -155,7 +155,7 @@ func setupRouter(db *sql.DB) *mux.Router {
 	uUC := userUsecase.NewUserUseCase(uRepo)
 	httpHandler.NewUserHandler(protected, uUC)
 
-	oRepo := orderRepo.NewPostgresOrderRepository(db)
+	oRepo := orderRepo.NewOrderRepository(db)
 	oUC := orderUsecase.NewOrderUseCase(oRepo)
 	httpHandler.NewOrderHandler(protected, oUC)
 

@@ -1,8 +1,8 @@
 package invoice
 
 type Invoice struct {
-	ID        string
-	OrderID   string
-	Amount    float64
-	CreatedAt int64
+	ID        string  `json:"id"`
+	OrderID   string  `json:"order_id"`
+	Amount    float64 `json:"amount"`
+	CreatedAt int64   `json:"created_at"`
 }

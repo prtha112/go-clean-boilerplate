@@ -1,48 +1,73 @@
 package order
 
 import (
-    "errors"
-    domain "go-clean-architecture/internal/domain/order"
+	"database/sql"
+	"errors"
+	domain "go-clean-architecture/internal/domain/order"
+
+	_ "github.com/lib/pq"
 )
 
-type orderRepository struct {
-    orders map[int]*domain.Order
-    nextID int
+type OrderRepository struct {
+	db *sql.DB
 }
 
-func NewOrderRepository() domain.Repository {
-    return &orderRepository{
-        orders: map[int]*domain.Order{},
-        nextID: 1,
-    }
+func NewOrderRepository(db *sql.DB) domain.Repository {
+	return &OrderRepository{db: db}
 }
 
-func (r *orderRepository) GetByID(id int) (*domain.Order, error) {
-    if order, ok := r.orders[id]; ok {
-        return order, nil
-    }
-    return nil, errors.New("order not found")
+func (r *OrderRepository) DeleteByID(id int) error {
+	res, err := r.db.Exec("DELETE FROM orders WHERE id = $1", id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return errors.New("order not found")
+	}
+	return nil
 }
 
-func (r *orderRepository) Create(order *domain.Order) error {
-    order.ID = r.nextID
-    r.orders[order.ID] = order
-    r.nextID++
-    return nil
+func (r *OrderRepository) Create(order *domain.Order) error {
+	err := r.db.QueryRow(
+		"INSERT INTO orders (item, amount) VALUES ($1, $2) RETURNING id",
+		order.Item, order.Amount,
+	).Scan(&order.ID)
+	return err
 }
 
-func (r *orderRepository) GetAll() ([]*domain.Order, error) {
-    orders := make([]*domain.Order, 0, len(r.orders))
-    for _, o := range r.orders {
-        orders = append(orders, o)
-    }
-    return orders, nil
+func (r *OrderRepository) GetAll() ([]*domain.Order, error) {
+	rows, err := r.db.Query("SELECT id, item, amount FROM orders")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var orders []*domain.Order
+	for rows.Next() {
+		var o domain.Order
+		if err := rows.Scan(&o.ID, &o.Item, &o.Amount); err != nil {
+			return nil, err
+		}
+		orders = append(orders, &o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return orders, nil
 }
 
-func (r *orderRepository) DeleteByID(id int) error {
-    if _, ok := r.orders[id]; !ok {
-        return errors.New("order not found")
-    }
-    delete(r.orders, id)
-    return nil
+func (r *OrderRepository) GetByID(id int) (*domain.Order, error) {
+	var order domain.Order
+	err := r.db.QueryRow("SELECT id, item, amount FROM orders WHERE id = $1", id).Scan(&order.ID, &order.Item, &order.Amount)
+	if err == sql.ErrNoRows {
+		return nil, errors.New("order not found")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &order, nil
 }

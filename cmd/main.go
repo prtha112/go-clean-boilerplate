@@ -7,11 +7,11 @@ import (
 
 	_ "github.com/lib/pq"
 
-	userRepo "go-clean-architecture/internal/infrastructure/user"
 	orderRepo "go-clean-architecture/internal/infrastructure/order"
+	userRepo "go-clean-architecture/internal/infrastructure/user"
 	httpHandler "go-clean-architecture/internal/interface/http"
-	userUsecase "go-clean-architecture/internal/usecase/user"
 	orderUsecase "go-clean-architecture/internal/usecase/order"
+	userUsecase "go-clean-architecture/internal/usecase/user"
 )
 
 func main() {

@@ -36,6 +36,22 @@ go-clean-boilerplate/
    go run ./cmd/main.go
    ```
 
+## Running Tests
+
+To run all unit tests:
+
+```sh
+# Run all tests in the project
+ go test ./...
+```
+
+You can also run tests for a specific package, for example:
+
+```sh
+# Run only order usecase tests
+ go test ./internal/usecase/order
+```
+
 ## How to Extend
 - Add new entities in `internal/domain/<entity>`
 - Implement new repositories in `internal/infrastructure/<entity>`

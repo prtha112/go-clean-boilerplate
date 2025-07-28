@@ -1,1 +1,46 @@
 # go-clean-boilerplate
+
+A simple Go project boilerplate using Clean Architecture principles.
+
+## Features
+- Layered structure: domain, usecase, infrastructure, interface
+- Example user entity, repository, and use case
+- Easy to extend for real-world applications
+
+## Project Structure
+```
+go-clean-boilerplate/
+├── cmd/                # Application entrypoint (main.go)
+├── internal/
+│   ├── domain/         # Business entities and repository interfaces
+│   │   └── user/
+│   ├── infrastructure/ # Implementations of repositories (e.g., DB)
+│   │   └── user/
+│   ├── interface/      # Delivery layer (HTTP handlers, routers)
+│   │   └── http/
+│   └── usecase/        # Application use cases
+│       └── user/
+├── go.mod
+├── go.sum
+└── README.md
+```
+
+## Getting Started
+1. **Clone the repository**
+   ```sh
+   git clone <your-repo-url>
+   cd go-clean-boilerplate
+   ```
+2. **Run the application**
+   ```sh
+   go run ./cmd/main.go
+   ```
+
+## How to Extend
+- Add new entities in `internal/domain/<entity>`
+- Implement new repositories in `internal/infrastructure/<entity>`
+- Add new use cases in `internal/usecase/<entity>`
+- Add new handlers in `internal/interface/http`
+
+## License
+MIT

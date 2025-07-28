@@ -144,21 +144,22 @@ func mustSetupDatabase(cfg *config) *sql.DB {
 func setupRouter(db *sql.DB) *mux.Router {
 	router := httpHandler.NewRouter()
 
-	// JWT middleware (protect all endpoints)
-	router.Use(httpHandler.JWTMiddleware)
+	// Public endpoints
+	httpHandler.NewAuthHandler(router) // /login (no JWT required)
 
-	// User endpoints
+	// Protected endpoints (JWT)
+	protected := router.PathPrefix("/").Subrouter()
+	protected.Use(httpHandler.JWTMiddleware)
+
 	uRepo := userRepo.NewUserRepository()
 	uUC := userUsecase.NewUserUseCase(uRepo)
-	httpHandler.NewUserHandler(router, uUC)
+	httpHandler.NewUserHandler(protected, uUC)
 
-	// Order endpoints
 	oRepo := orderRepo.NewPostgresOrderRepository(db)
 	oUC := orderUsecase.NewOrderUseCase(oRepo)
-	httpHandler.NewOrderHandler(router, oUC)
+	httpHandler.NewOrderHandler(protected, oUC)
 
-	// Invoice endpoint (POST /invoices)
-	httpHandler.NewInvoiceHandler(router)
+	httpHandler.NewInvoiceHandler(protected)
 
 	return router
 }

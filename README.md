@@ -1,55 +1,78 @@
-# go-clean-boilerplate
+# Go Clean Architecture Boilerplate (REST, Kafka, JWT)
 
-A simple Go project boilerplate using Clean Architecture principles.
+Production-ready Go boilerplate using Clean Architecture, REST API, Kafka, JWT, and Docker.
 
 ## Features
-- Layered structure: domain, usecase, infrastructure, interface
-- Example user entity, repository, and use case
-- Easy to extend for real-world applications
+- Clean Architecture (domain/usecase/infrastructure/interface separation)
+- REST API (CRUD for User, Order, Invoice)
+- Kafka Consumer/Producer (Invoice)
+- JWT Authentication (protects all endpoints except /login)
+- Docker multi-mode (REST API or Kafka Consumer)
+- Example .env and JWT generation script
 
 ## Project Structure
 ```
 go-clean-boilerplate/
-├── cmd/                # Application entrypoint (main.go)
+├── cmd/                # main.go (entrypoint)
 ├── internal/
-│   ├── domain/         # Business entities and repository interfaces
-│   │   └── user/
-│   ├── infrastructure/ # Implementations of repositories (e.g., DB)
-│   │   └── user/
-│   ├── interface/      # Delivery layer (HTTP handlers, routers)
-│   │   └── http/
-│   └── usecase/        # Application use cases
-│       └── user/
-├── go.mod
-├── go.sum
-└── README.md
+│   ├── domain/         # Entity, interface
+│   ├── infrastructure/ # DB, Kafka impl
+│   ├── interface/      # HTTP handler, router, middleware
+│   └── usecase/        # Business logic
+├── scripts/            # generate_jwt.go
+├── Dockerfile
+├── .env.example
+├── README.md
 ```
 
 ## Getting Started
-1. **Clone the repository**
+1. Clone repo
    ```sh
    git clone <your-repo-url>
    cd go-clean-boilerplate
    ```
-
-2. **Build Docker image**
+2. Create .env file (see .env.example for reference)
+3. Build Docker image
    ```sh
    docker build -t go-clean-app .
    ```
-
-3. **Run REST API (default port 8085)**
+4. Run REST API
    ```sh
-   docker run -e APP_MODE=restapi -p 8085:8085 go-clean-app
+   docker run --env-file .env -e APP_MODE=restapi -p 8085:8085 go-clean-app
+   ```
+5. Run Kafka Consumer
+   ```sh
+   docker run --env-file .env -e APP_MODE=consume-invoice go-clean-app
    ```
 
-4. **Run Kafka Invoice Consumer**
-   ```sh
-   docker run -e APP_MODE=consume-invoice go-clean-app
-   ```
+## REST API Endpoints
+- POST   /login                (get JWT, no token required)
+- GET    /users/{id}           (JWT required)
+- POST   /users                (JWT required)
+- GET    /orders/{id}          (JWT required)
+- DELETE /orders/{id}          (JWT required)
+- GET    /orders               (JWT required)
+- POST   /orders               (JWT required)
+- POST   /invoices             (JWT required, produce invoice to Kafka)
 
+## Example Request/Response
+### 1. Get JWT
+```sh
+curl -X POST http://localhost:8085/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"password"}'
+```
+Response:
+```json
+{"token": "<jwt-token>"}
+```
 
-## Example Invoice Kafka Message (JSON)
+### 2. Call API with JWT
+```sh
+curl -H "Authorization: Bearer <jwt-token>" http://localhost:8085/users/1
+```
 
+### 3. Example JSON for Invoice (produce to Kafka)
 ```json
 {
   "id": "sojvp-001",
@@ -58,49 +81,18 @@ go-clean-boilerplate/
   "created_at": 1722120000
 }
 ```
-## JWT Authentication
 
-All REST API endpoints require a valid JWT token in the `Authorization` header.
+## JWT
+- Set JWT_SECRET in .env
+- Use the generate_jwt.go script to create a token for testing
 
-### 1. Set JWT_SECRET
-Set the environment variable `JWT_SECRET` in your `.env` or deployment environment. Example:
+## Kafka
+- Set KAFKA_BROKER, KAFKA_INVOICE_TOPIC, KAFKA_INVOICE_GROUP in .env
+- Supports SASL/PLAIN (Confluent Cloud) with KAFKA_USERNAME, KAFKA_PASSWORD
 
-```
-JWT_SECRET=your_jwt_secret
-```
-
-### 2. Generate a JWT Token
-You can generate a token using the provided script:
-
+## Testing
 ```sh
-export JWT_SECRET=your_jwt_secret
-go run scripts/generate_jwt.go
-```
-This will print a valid JWT token for testing.
-
-### 3. Use the Token in API Requests
-Add the following header to all API requests:
-
-```
-Authorization: Bearer <your-jwt-token>
-```
-
-If the token is missing, expired, or invalid, the API will return `401 Unauthorized`.
-
-## Running Tests
-
-To run all unit tests:
-
-```sh
-# Run all tests in the project
- go test ./...
-```
-
-You can also run tests for a specific package, for example:
-
-```sh
-# Run only order usecase tests
- go test ./internal/usecase/order
+go test ./...
 ```
 
 ## How to Extend

@@ -1,0 +1,2 @@
+# Ignore local Postgres data
+pgdata/

@@ -21,6 +21,7 @@ import (
 	userUsecase "go-clean-architecture/internal/usecase/user"
 )
 
+// main is the application entrypoint. Selects mode by argument.
 func main() {
 	if len(os.Args) < 2 {
 		printUsageAndExit()
@@ -28,27 +29,39 @@ func main() {
 
 	switch os.Args[1] {
 	case "restapi":
-		runREST()
+		runRESTServer()
 	case "consume-invoice":
-		runInvoiceConsumer()
+		runInvoiceKafkaConsumer()
 	default:
 		printUsageAndExit()
 	}
 }
 
-func runREST() {
-	cfg := loadConfig()
-	db := setupDatabase(cfg)
-	defer db.Close()
+// runRESTServer starts the HTTP REST API server.
+func runRESTServer() {
+	cfg := mustLoadConfig()
+	db := mustSetupDatabase(cfg)
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("error closing db: %v", err)
+		}
+	}()
 	router := setupRouter(db)
-	log.Printf("Listening on :%s", cfg.Port)
-	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
+	log.Printf("REST API listening on :%s", cfg.Port)
+	if err := http.ListenAndServe(":"+cfg.Port, router); err != nil {
+		log.Fatalf("server error: %v", err)
+	}
 }
 
-func runInvoiceConsumer() {
-	cfg := loadConfig()
-	db := setupDatabase(cfg)
-	defer db.Close()
+// runInvoiceKafkaConsumer starts the Kafka consumer for invoice events.
+func runInvoiceKafkaConsumer() {
+	cfg := mustLoadConfig()
+	db := mustSetupDatabase(cfg)
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("error closing db: %v", err)
+		}
+	}()
 	brokers := []string{getEnv("KAFKA_BROKER", "localhost:9092")}
 	topic := getEnv("KAFKA_INVOICE_TOPIC", "invoice-topic")
 	groupID := getEnv("KAFKA_INVOICE_GROUP", "invoice-group")
@@ -56,15 +69,17 @@ func runInvoiceConsumer() {
 	uc := invoiceUsecase.NewInvoiceUseCase(repo)
 	consumer := invoiceInfra.NewKafkaInvoiceConsumer(brokers, topic, groupID, uc.ConsumeInvoiceMessage)
 	ctx := context.Background()
-	log.Println("Starting Kafka invoice consumer...")
+	log.Printf("Kafka invoice consumer started (topic: %s, group: %s)", topic, groupID)
 	consumer.Start(ctx)
 }
 
+// printUsageAndExit prints usage and exits with error code.
 func printUsageAndExit() {
-	log.Println("Usage: ./app [rest|consume-invoice]")
+	log.Println("Usage: ./app [restapi|consume-invoice]")
 	os.Exit(1)
 }
 
+// config holds application configuration.
 type config struct {
 	PGHost     string
 	PGPort     string
@@ -75,8 +90,9 @@ type config struct {
 	Port       string
 }
 
-func loadConfig() *config {
-	return &config{
+// mustLoadConfig loads config and validates required fields.
+func mustLoadConfig() *config {
+	cfg := &config{
 		PGHost:     getEnv("PG_HOST", "localhost"),
 		PGPort:     getEnv("PG_PORT", "15432"),
 		PGUser:     getEnv("PG_USER", "mock"),
@@ -85,9 +101,15 @@ func loadConfig() *config {
 		PGSSL:      getEnv("PG_SSLMODE", "disable"),
 		Port:       getEnv("PORT", "8085"),
 	}
+	// Add more validation as needed
+	if cfg.PGHost == "" || cfg.PGUser == "" || cfg.PGPassword == "" || cfg.PGDB == "" {
+		log.Fatal("database config is required (PG_HOST, PG_USER, PG_PASSWORD, PG_DB)")
+	}
+	return cfg
 }
 
-func setupDatabase(cfg *config) *sql.DB {
+// mustSetupDatabase opens a postgres connection or exits on error.
+func mustSetupDatabase(cfg *config) *sql.DB {
 	dsn := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.PGHost, cfg.PGPort, cfg.PGUser, cfg.PGPassword, cfg.PGDB, cfg.PGSSL,
@@ -96,18 +118,23 @@ func setupDatabase(cfg *config) *sql.DB {
 	if err != nil {
 		log.Fatalf("failed to connect to postgres: %v", err)
 	}
+	// Optionally ping to check connection
+	if err := db.Ping(); err != nil {
+		log.Fatalf("cannot ping postgres: %v", err)
+	}
 	return db
 }
 
+// setupRouter wires up all HTTP handlers and returns the router.
 func setupRouter(db *sql.DB) *mux.Router {
 	router := httpHandler.NewRouter()
 
-	// User
+	// User endpoints
 	uRepo := userRepo.NewUserRepository()
 	uUC := userUsecase.NewUserUseCase(uRepo)
 	httpHandler.NewUserHandler(router, uUC)
 
-	// Order
+	// Order endpoints
 	oRepo := orderRepo.NewPostgresOrderRepository(db)
 	oUC := orderUsecase.NewOrderUseCase(oRepo)
 	httpHandler.NewOrderHandler(router, oUC)
@@ -115,6 +142,7 @@ func setupRouter(db *sql.DB) *mux.Router {
 	return router
 }
 
+// getEnv returns the value of the environment variable or fallback if not set.
 func getEnv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

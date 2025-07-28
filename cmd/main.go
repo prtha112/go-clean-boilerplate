@@ -144,6 +144,9 @@ func mustSetupDatabase(cfg *config) *sql.DB {
 func setupRouter(db *sql.DB) *mux.Router {
 	router := httpHandler.NewRouter()
 
+	// JWT middleware (protect all endpoints)
+	router.Use(httpHandler.JWTMiddleware)
+
 	// User endpoints
 	uRepo := userRepo.NewUserRepository()
 	uUC := userUsecase.NewUserUseCase(uRepo)

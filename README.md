@@ -58,6 +58,34 @@ go-clean-boilerplate/
   "created_at": 1722120000
 }
 ```
+## JWT Authentication
+
+All REST API endpoints require a valid JWT token in the `Authorization` header.
+
+### 1. Set JWT_SECRET
+Set the environment variable `JWT_SECRET` in your `.env` or deployment environment. Example:
+
+```
+JWT_SECRET=your_jwt_secret
+```
+
+### 2. Generate a JWT Token
+You can generate a token using the provided script:
+
+```sh
+export JWT_SECRET=your_jwt_secret
+go run scripts/generate_jwt.go
+```
+This will print a valid JWT token for testing.
+
+### 3. Use the Token in API Requests
+Add the following header to all API requests:
+
+```
+Authorization: Bearer <your-jwt-token>
+```
+
+If the token is missing, expired, or invalid, the API will return `401 Unauthorized`.
 
 ## Running Tests
 

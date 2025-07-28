@@ -1,15 +1,18 @@
-
 package main
 
 import (
+	"context"
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"fmt"
 
-	_ "github.com/lib/pq"
+	invoiceInfra "go-clean-architecture/internal/infrastructure/invoice"
+	invoiceUsecase "go-clean-architecture/internal/usecase/invoice"
+
 	"github.com/gorilla/mux"
+	_ "github.com/lib/pq"
 
 	orderRepo "go-clean-architecture/internal/infrastructure/order"
 	userRepo "go-clean-architecture/internal/infrastructure/user"
@@ -19,19 +22,47 @@ import (
 )
 
 func main() {
-	// Load configuration
-	cfg := loadConfig()
+	if len(os.Args) < 2 {
+		printUsageAndExit()
+	}
 
-	// Setup database
+	switch os.Args[1] {
+	case "restapi":
+		runREST()
+	case "consume-invoice":
+		runInvoiceConsumer()
+	default:
+		printUsageAndExit()
+	}
+}
+
+func runREST() {
+	cfg := loadConfig()
 	db := setupDatabase(cfg)
 	defer db.Close()
-
-	// Setup router and handlers
 	router := setupRouter(db)
-
-	// Start server
 	log.Printf("Listening on :%s", cfg.Port)
 	log.Fatal(http.ListenAndServe(":"+cfg.Port, router))
+}
+
+func runInvoiceConsumer() {
+	cfg := loadConfig()
+	db := setupDatabase(cfg)
+	defer db.Close()
+	brokers := []string{getEnv("KAFKA_BROKER", "localhost:9092")}
+	topic := getEnv("KAFKA_INVOICE_TOPIC", "invoice-topic")
+	groupID := getEnv("KAFKA_INVOICE_GROUP", "invoice-group")
+	repo := invoiceInfra.NewPostgresInvoiceRepository(db)
+	uc := invoiceUsecase.NewInvoiceUseCase(repo)
+	consumer := invoiceInfra.NewKafkaInvoiceConsumer(brokers, topic, groupID, uc.ConsumeInvoiceMessage)
+	ctx := context.Background()
+	log.Println("Starting Kafka invoice consumer...")
+	consumer.Start(ctx)
+}
+
+func printUsageAndExit() {
+	log.Println("Usage: ./app [rest|consume-invoice]")
+	os.Exit(1)
 }
 
 type config struct {

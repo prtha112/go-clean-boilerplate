@@ -31,10 +31,33 @@ go-clean-boilerplate/
    git clone <your-repo-url>
    cd go-clean-boilerplate
    ```
-2. **Run the application**
+
+2. **Build Docker image**
    ```sh
-   go run ./cmd/main.go
+   docker build -t go-clean-app .
    ```
+
+3. **Run REST API (default port 8085)**
+   ```sh
+   docker run -e APP_MODE=restapi -p 8085:8085 go-clean-app
+   ```
+
+4. **Run Kafka Invoice Consumer**
+   ```sh
+   docker run -e APP_MODE=consume-invoice go-clean-app
+   ```
+
+
+## Example Invoice Kafka Message (JSON)
+
+```json
+{
+  "id": "sojvp-001",
+  "order_id": "order-123",
+  "amount": 999.99,
+  "created_at": 1722120000
+}
+```
 
 ## Running Tests
 

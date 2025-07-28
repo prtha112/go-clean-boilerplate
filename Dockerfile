@@ -10,4 +10,8 @@ FROM alpine:3.19
 WORKDIR /app
 COPY --from=builder /app/app ./app
 EXPOSE 8085
-CMD ["./app"]
+
+# Default to restapi if not specified
+ARG APP_MODE=restapi
+ENV APP_MODE=${APP_MODE}
+ENTRYPOINT ["/bin/sh", "-c", "./app $APP_MODE"]

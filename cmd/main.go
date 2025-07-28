@@ -47,9 +47,24 @@ func runRESTServer() {
 		}
 	}()
 	router := setupRouter(db)
+	printRoutes(router)
 	log.Printf("REST API listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, router); err != nil {
 		log.Fatalf("server error: %v", err)
+	}
+}
+
+// printRoutes logs all registered REST API paths and methods.
+func printRoutes(router *mux.Router) {
+	log.Println("Available REST API endpoints:")
+	err := router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
+		path, _ := route.GetPathTemplate()
+		methods, _ := route.GetMethods()
+		log.Printf("  %s %s", methods, path)
+		return nil
+	})
+	if err != nil {
+		log.Printf("error walking routes: %v", err)
 	}
 }
 
@@ -138,6 +153,9 @@ func setupRouter(db *sql.DB) *mux.Router {
 	oRepo := orderRepo.NewPostgresOrderRepository(db)
 	oUC := orderUsecase.NewOrderUseCase(oRepo)
 	httpHandler.NewOrderHandler(router, oUC)
+
+	// Invoice endpoint (POST /invoices)
+	httpHandler.NewInvoiceHandler(router)
 
 	return router
 }

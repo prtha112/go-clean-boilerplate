@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
@@ -103,4 +104,8 @@ func VerifyPassword(hashedPassword string, password string) bool {
 		return false
 	}
 	return true
+}
+
+func GenerateID() string {
+	return "inv-" + time.Now().Format("20060102150405")
 }

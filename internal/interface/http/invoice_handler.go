@@ -9,6 +9,8 @@ import (
 	"go-clean-architecture/internal/domain/invoice"
 	invoiceUsecase "go-clean-architecture/internal/usecase/invoice"
 
+	"go-clean-architecture/config"
+
 	"github.com/gorilla/mux"
 )
 
@@ -29,7 +31,7 @@ func (h *InvoiceHandler) invoiceHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if inv.ID == "" {
-		inv.ID = generateID()
+		inv.ID = config.GenerateID()
 	}
 	if inv.CreatedAt == 0 {
 		inv.CreatedAt = time.Now().Unix()
@@ -44,8 +46,4 @@ func (h *InvoiceHandler) invoiceHandler(w http.ResponseWriter, r *http.Request) 
 
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(`{"status":"ok"}`))
-}
-
-func generateID() string {
-	return "inv-" + time.Now().Format("20060102150405")
 }

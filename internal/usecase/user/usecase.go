@@ -12,6 +12,6 @@ func NewUserUseCase(repo user.Repository) *UseCase {
 	return &UseCase{repo: repo}
 }
 
-func (uc *UseCase) Login(username, password string) (*user.User, error) {
-	return uc.repo.GetByUsernameAndPassword(username, password)
+func (uc *UseCase) Login(user user.User) (*user.User, error) {
+	return uc.repo.GetByUsernameAndPassword(user.Username, user.Password)
 }

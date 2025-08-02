@@ -3,12 +3,12 @@ package http
 import (
 	"database/sql"
 	"encoding/json"
+	domainUser "go-clean-architecture/internal/domain/user"
+	userRepo "go-clean-architecture/internal/infrastructure/user"
+	userUsecase "go-clean-architecture/internal/usecase/user"
 	"net/http"
 	"os"
 	"time"
-
-	userRepo "go-clean-architecture/internal/infrastructure/user"
-	userUsecase "go-clean-architecture/internal/usecase/user"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
@@ -33,14 +33,15 @@ func NewAuthHandler(router *mux.Router, db *sql.DB) {
 		}
 		repo := userRepo.NewPostgresUserRepository(db)
 		uc := userUsecase.NewUserUseCase(repo)
-		user, err := uc.Login(req.Username, req.Password)
+		userDomain := domainUser.User{Username: req.Username, Password: req.Password}
+		user, err := uc.Login(userDomain)
 		if err != nil {
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
 			return
 		}
 		secret := os.Getenv("JWT_SECRET")
 		claims := jwt.MapClaims{
-			"sub": user.Name,
+			"sub": user.Username,
 			"exp": time.Now().Add(time.Hour * 24).Unix(),
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

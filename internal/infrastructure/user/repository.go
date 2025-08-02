@@ -20,7 +20,7 @@ func NewPostgresUserRepository(db *sql.DB) domain.Repository {
 func (r *PostgresUserRepository) GetByUsernameAndPassword(username, password string) (*domain.User, error) {
 	row := r.DB.QueryRowContext(context.Background(), "SELECT id, username, password FROM users WHERE username = $1", username)
 	var user domain.User
-	if err := row.Scan(&user.ID, &user.Name, &user.Password); err != nil {
+	if err := row.Scan(&user.ID, &user.Username, &user.Password); err != nil {
 		log.Printf("Login failed for username=%s", username)
 		return nil, errors.New("invalid credentials")
 	}

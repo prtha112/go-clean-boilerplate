@@ -33,14 +33,6 @@ func NewPostgresInvoiceRepository(db *sql.DB) *PostgresInvoiceRepository {
 	return &PostgresInvoiceRepository{DB: db, Writer: writer}
 }
 
-// Close releases resources for PostgresInvoiceRepository (including Kafka writer)
-func (r *PostgresInvoiceRepository) Close() error {
-	if r.Writer != nil {
-		return r.Writer.Close()
-	}
-	return nil
-}
-
 func (r *PostgresInvoiceRepository) CreateInvoice(invoice *domain.Invoice) error {
 	_, err := r.DB.ExecContext(context.Background(),
 		`INSERT INTO invoices (order_id, amount) VALUES ($1, $2)`,

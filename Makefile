@@ -1,6 +1,6 @@
 # Makefile for go-clean-boilerplate
 
-.PHONY: test test-order test-user test-invoice
+.PHONY: test compose db-login get-jwt
 
 test:
 	go test ./internal/usecase/...

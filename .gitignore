@@ -1,3 +1,2 @@
 # Ignore local Postgres data
 pgdata/
-.env

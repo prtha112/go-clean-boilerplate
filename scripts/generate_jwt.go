@@ -6,9 +6,13 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env if exists
+	_ = godotenv.Load()
+
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		fmt.Println("Please set JWT_SECRET env variable")

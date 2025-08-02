@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/joho/godotenv"
+
 	invoiceInfra "go-clean-architecture/internal/infrastructure/invoice"
 	invoiceUsecase "go-clean-architecture/internal/usecase/invoice"
 
@@ -23,6 +25,7 @@ import (
 
 // main is the application entrypoint. Selects mode by argument.
 func main() {
+	_ = godotenv.Load()
 	if len(os.Args) < 2 {
 		printUsageAndExit()
 	}

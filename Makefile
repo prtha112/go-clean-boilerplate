@@ -3,7 +3,7 @@
 .PHONY: test test-order test-user test-invoice
 
 test:
-	go test ./...
+	go test ./internal/usecase/...
 
 compose:
 	docker-compose down

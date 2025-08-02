@@ -24,7 +24,6 @@ func (r *PostgresUserRepository) GetByUsernameAndPassword(username, password str
 		log.Printf("Login failed for username=%s", username)
 		return nil, errors.New("invalid credentials")
 	}
-	log.Printf("Login: raw=%s db_hash=%s", password, user.Password)
 	if !config.VerifyPassword(user.Password, password) {
 		log.Printf("Login failed: password mismatch for username=%s", username)
 		return nil, errors.New("invalid credentials")

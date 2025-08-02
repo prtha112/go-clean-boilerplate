@@ -4,26 +4,26 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
 	"time"
 
+	"go-clean-architecture/internal/domain/invoice"
+	invoiceUsecase "go-clean-architecture/internal/usecase/invoice"
+
 	"github.com/gorilla/mux"
-	"github.com/segmentio/kafka-go"
 )
 
-type Invoice struct {
-	ID        string  `json:"id"`
-	OrderID   string  `json:"order_id"`
-	Amount    float64 `json:"amount"`
-	CreatedAt int64   `json:"created_at"`
+type InvoiceHandler struct {
+	uc invoice.UseCase
 }
 
-func NewInvoiceHandler(router *mux.Router) {
-	router.HandleFunc("/invoices", invoiceHandler).Methods("POST")
+func NewInvoiceHandler(router *mux.Router, repo invoice.Repository) {
+	uc := invoiceUsecase.NewInvoiceUseCase(repo)
+	handler := &InvoiceHandler{uc: uc}
+	router.HandleFunc("/invoices", handler.invoiceHandler).Methods("POST")
 }
 
-func invoiceHandler(w http.ResponseWriter, r *http.Request) {
-	var inv Invoice
+func (h *InvoiceHandler) invoiceHandler(w http.ResponseWriter, r *http.Request) {
+	var inv invoice.Invoice
 	if err := json.NewDecoder(r.Body).Decode(&inv); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
@@ -35,32 +35,7 @@ func invoiceHandler(w http.ResponseWriter, r *http.Request) {
 		inv.CreatedAt = time.Now().Unix()
 	}
 
-	msg, err := json.Marshal(inv)
-	if err != nil {
-		http.Error(w, "marshal error", http.StatusInternalServerError)
-		return
-	}
-
-	broker := os.Getenv("KAFKA_BROKER")
-	if broker == "" {
-		broker = "localhost:9092"
-	}
-	topic := os.Getenv("KAFKA_INVOICE_TOPIC")
-	if topic == "" {
-		topic = "invoice-topic"
-	}
-
-	writer := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  []string{broker},
-		Topic:    topic,
-		Balancer: &kafka.LeastBytes{},
-	})
-	defer writer.Close()
-
-	err = writer.WriteMessages(r.Context(), kafka.Message{
-		Key:   []byte(inv.ID),
-		Value: msg,
-	})
+	err := h.uc.ProduceInvoiceMessage(&inv)
 	if err != nil {
 		log.Printf("produce error: %v", err)
 		http.Error(w, "produce error", http.StatusInternalServerError)

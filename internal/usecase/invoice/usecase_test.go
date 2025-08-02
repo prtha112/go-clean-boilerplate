@@ -10,6 +10,11 @@ type mockRepo struct {
 	called bool
 }
 
+// PublishInvoiceMessage implements invoice.Repository.
+func (m *mockRepo) PublishInvoiceMessage(msg []byte) error {
+	panic("unimplemented")
+}
+
 func (m *mockRepo) CreateInvoice(invoice *domain.Invoice) error {
 	m.called = true
 	return nil

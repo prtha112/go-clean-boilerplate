@@ -21,4 +21,13 @@ func (u *invoiceUseCase) ConsumeInvoiceMessage(msg []byte) error {
 	return u.repo.CreateInvoice(&inv)
 }
 
+// ProduceInvoiceMessage implements invoice.UseCase.
+func (u *invoiceUseCase) ProduceInvoiceMessage(invoice *domain.Invoice) error {
+	data, err := json.Marshal(invoice)
+	if err != nil {
+		return err
+	}
+	return u.repo.PublishInvoiceMessage(data)
+}
+
 var _ domain.UseCase = (*invoiceUseCase)(nil)

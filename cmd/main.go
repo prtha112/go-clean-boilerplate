@@ -89,7 +89,8 @@ func setupRouter(db *sql.DB) *mux.Router {
 	orderUsecase := orderUsecase.NewOrderUseCase(orderRepo)
 	httpHandler.NewOrderHandler(protected, orderUsecase)
 
-	httpHandler.NewInvoiceHandler(protected)
+	invoiceRepo := invoiceInfra.NewPostgresInvoiceRepository(db)
+	httpHandler.NewInvoiceHandler(protected, invoiceRepo)
 
 	return router
 }

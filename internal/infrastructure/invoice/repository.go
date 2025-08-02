@@ -29,4 +29,11 @@ func (r *PostgresInvoiceRepository) CreateInvoice(invoice *domain.Invoice) error
 	return err
 }
 
+// PublishInvoiceMessage implements invoice.Repository.
+func (r *PostgresInvoiceRepository) PublishInvoiceMessage(msg []byte) error {
+	// No-op for Postgres, just log for interface compliance
+	log.Printf("PublishInvoiceMessage called (noop): %s", string(msg))
+	return nil
+}
+
 var _ domain.Repository = (*PostgresInvoiceRepository)(nil)

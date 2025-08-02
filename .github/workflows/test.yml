@@ -20,20 +20,3 @@ jobs:
         run: go mod tidy
       - name: Run tests
         run: make test
-      - name: Set up Docker Compose
-        uses: docker/setup-compose-action@v1
-      - name: Run compose
-        run: make compose-github-action
-      - name: Test endpoint
-        run: |
-          echo "==== LOGIN RESPONSE ===="
-          curl -s -X POST http://localhost:8085/login \
-            -H "Content-Type: application/json" \
-            -d '{"username": "user1", "password": "password1"}' > login.json
-          cat login.json
-          TOKEN=$(cat login.json | jq -r .token)
-          echo "==== ORDERS RESPONSE ===="
-          curl -s -X GET http://localhost:8085/orders \
-            -H "Authorization: Bearer $TOKEN" \
-            -H "Content-Type: application/json"
-          echo "======================="

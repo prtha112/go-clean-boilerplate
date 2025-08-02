@@ -14,7 +14,7 @@ services:
       - "15432:5432"
     volumes:
       - ./pgdata:/var/lib/postgresql/data
-      - ./scripts/migrations.sql:/docker-entrypoint-initdb.d/migrations.sql
+      - ./sql/migrations.sql:/docker-entrypoint-initdb.d/migrations.sql
     networks:
       - appnet
   zoo1:

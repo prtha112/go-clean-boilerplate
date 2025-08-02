@@ -1,6 +1,6 @@
 # Makefile for go-clean-boilerplate
 
-.PHONY: test compose db-login get-jwt
+.PHONY: test compose-github-action compose-local db-login get-jwt
 
 test:
 	go test ./internal/usecase/...
@@ -19,6 +19,3 @@ compose-local:
 
 db-login:
 	docker exec -it postgresdb psql -U mock -d mockdb
-
-get-jwt:
-	go run ./scriptsget-jwt.go

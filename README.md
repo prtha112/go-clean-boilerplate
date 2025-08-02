@@ -88,6 +88,17 @@ curl -H "Authorization: Bearer <jwt-token>" http://localhost:8085/orders
 - Supports SASL/PLAIN (Confluent Cloud) with KAFKA_USERNAME, KAFKA_PASSWORD
 - Kafka consumer logs partition and offset for each message
 
+## Kafka Setup & Testing
+To create the invoice topic and test producing messages:
+
+```sh
+# Create topic (3 partitions)
+kafka-topics --create --bootstrap-server localhost:9092 --replication-factor 1 --partitions 3 --topic invoice-topic
+
+# Produce messages to topic
+kafka-console-producer --bootstrap-server localhost:9092 --topic invoice-topic
+```
+
 ## Database Schema
 - Make sure your invoices table supports string order_id if you use non-integer IDs
 - Example:

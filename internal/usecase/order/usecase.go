@@ -6,14 +6,7 @@ type orderUseCase struct {
 	repo domain.Repository
 }
 
-type UseCase interface {
-	GetOrder(id int) (*domain.Order, error)
-	CreateOrder(order *domain.Order) error
-	GetAllOrders() ([]*domain.Order, error)
-	DeleteOrder(id int) error
-}
-
-func NewOrderUseCase(r domain.Repository) UseCase {
+func NewOrderUseCase(r domain.Repository) *orderUseCase {
 	return &orderUseCase{repo: r}
 }
 

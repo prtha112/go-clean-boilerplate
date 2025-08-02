@@ -85,9 +85,9 @@ func setupRouter(db *sql.DB) *mux.Router {
 	protected := router.PathPrefix("/").Subrouter()
 	protected.Use(httpHandler.JWTMiddleware)
 
-	oRepo := orderRepo.NewOrderRepository(db)
-	oUC := orderUsecase.NewOrderUseCase(oRepo)
-	httpHandler.NewOrderHandler(protected, oUC)
+	orderRepo := orderRepo.NewOrderRepository(db)
+	orderUsecase := orderUsecase.NewOrderUseCase(orderRepo)
+	httpHandler.NewOrderHandler(protected, orderUsecase)
 
 	httpHandler.NewInvoiceHandler(protected)
 

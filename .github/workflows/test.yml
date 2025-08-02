@@ -24,8 +24,6 @@ jobs:
         uses: docker/setup-compose-action@v1
       - name: Run compose
         run: make compose
-      - name: Sleep for 10 seconds
-        run: sleep 10
       - name: Test login endpoint
         run: |
           curl -X POST http://localhost:8085/login \

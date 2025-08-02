@@ -20,3 +20,12 @@ jobs:
         run: go mod tidy
       - name: Run tests
         run: make test
+      - name: Run compose
+        run: make compose
+      - name: Sleep for 10 seconds
+        run: sleep 10
+      - name: Test login endpoint
+        run: |
+          curl -X POST http://localhost:8085/login \
+            -H "Content-Type: application/json" \
+            -d '{"username": "user1", "password": "password1"}'

@@ -8,13 +8,17 @@ Production-ready Go boilerplate using Clean Architecture, REST API, Kafka, JWT, 
 - Kafka Consumer/Producer (Invoice)
 - JWT Authentication (protects all endpoints except /login)
 - Docker multi-mode (REST API or Kafka Consumer)
+- Centralized config in `internal/config`
 - Example .env and JWT generation script
+- Error/success logging for DB and Kafka
+- Kafka consumer logs partition and offset
 
 ## Project Structure
 ```
 go-clean-boilerplate/
 ├── cmd/                # main.go (entrypoint)
 ├── internal/
+│   ├── config/         # App config, DB setup
 │   ├── domain/         # Entity, interface
 │   ├── infrastructure/ # DB, Kafka impl
 │   ├── interface/      # HTTP handler, router, middleware
@@ -67,7 +71,7 @@ Response:
 
 ### 2. Call API with JWT
 ```sh
-curl -H "Authorization: Bearer <jwt-token>" http://localhost:8085/users/1
+curl -H "Authorization: Bearer <jwt-token>" http://localhost:8085/orders
 ```
 
 ### 3. Example JSON for Invoice (produce to Kafka)
@@ -82,6 +86,22 @@ curl -H "Authorization: Bearer <jwt-token>" http://localhost:8085/users/1
 ## Kafka
 - Set KAFKA_BROKER, KAFKA_INVOICE_TOPIC, KAFKA_INVOICE_GROUP in .env
 - Supports SASL/PLAIN (Confluent Cloud) with KAFKA_USERNAME, KAFKA_PASSWORD
+- Kafka consumer logs partition and offset for each message
+
+## Database Schema
+- Make sure your invoices table supports string order_id if you use non-integer IDs
+- Example:
+  ```sql
+  CREATE TABLE invoices (
+    id SERIAL PRIMARY KEY,
+    order_id VARCHAR(64) NOT NULL,
+    amount NUMERIC NOT NULL
+  );
+  ```
+
+## Logging & Debugging
+- All DB insertions (invoice) log error and success with input data
+- Kafka consumer logs partition, offset, and handler errors
 
 ## Testing
 ```sh
@@ -93,6 +113,7 @@ go test ./...
 - Implement new repositories in `internal/infrastructure/<entity>`
 - Add new use cases in `internal/usecase/<entity>`
 - Add new handlers in `internal/interface/http`
+- Add config folder
 
 ## License
 MIT

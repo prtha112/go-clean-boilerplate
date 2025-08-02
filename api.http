@@ -31,3 +31,13 @@ Content-Type: application/json
 ### 📦 Get Order by ID using token from login
 DELETE http://localhost:8085/orders/4
 Authorization: Bearer {{login.response.body.token}}
+
+### 📦 Create a new invoice using token from login
+POST http://localhost:8085/invoices
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+    "order_id": "order-123",
+    "amount": 999.99
+}

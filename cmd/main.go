@@ -14,7 +14,6 @@ import (
 	invoiceUsecase "go-clean-architecture/internal/usecase/invoice"
 
 	"github.com/gorilla/mux"
-	_ "github.com/lib/pq"
 
 	orderRepo "go-clean-architecture/internal/infrastructure/order"
 	httpHandler "go-clean-architecture/internal/interface/http"

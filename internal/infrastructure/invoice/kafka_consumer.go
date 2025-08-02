@@ -57,6 +57,7 @@ func (c *KafkaInvoiceConsumer) Start(ctx context.Context) {
 			log.Printf("kafka read error: %v", err)
 			continue
 		}
+		log.Printf("Kafka message received: partition=%d offset=%d", m.Partition, m.Offset)
 		if err := c.Handler(m.Value); err != nil {
 			log.Printf("invoice handler error: %v", err)
 		}

@@ -5,7 +5,14 @@
 test:
 	go test ./internal/usecase/...
 
-compose:
+compose-github-action:
+	docker compose down
+	rm -rf pgdata
+	docker compose up -d --build
+	sleep 10
+	go run cmd/main.go restapi &
+
+compose-local:
 	docker compose down
 	rm -rf pgdata
 	docker compose up -d --build

@@ -23,7 +23,7 @@ jobs:
       - name: Set up Docker Compose
         uses: docker/setup-compose-action@v1
       - name: Run compose
-        run: make compose
+        run: make compose-github-action
       - name: Test endpoint
         run: |
           echo "==== LOGIN RESPONSE ===="

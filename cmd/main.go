@@ -10,7 +10,7 @@ import (
 	"github.com/joho/godotenv"
 
 	config "go-clean-architecture/config"
-	invoiceInfra "go-clean-architecture/internal/infrastructure/invoice"
+	invoiceRepo "go-clean-architecture/internal/infrastructure/invoice"
 	invoiceUsecase "go-clean-architecture/internal/usecase/invoice"
 
 	"github.com/gorilla/mux"
@@ -66,9 +66,9 @@ func runInvoiceKafkaConsumer() {
 	brokers := []string{config.GetEnv("KAFKA_BROKER", "localhost:9092")}
 	topic := config.GetEnv("KAFKA_INVOICE_TOPIC", "invoice-topic")
 	groupID := config.GetEnv("KAFKA_INVOICE_GROUP", "invoice-group")
-	repo := invoiceInfra.NewPostgresInvoiceRepository(db)
+	repo := invoiceRepo.NewPostgresInvoiceRepository(db)
 	uc := invoiceUsecase.NewInvoiceUseCase(repo)
-	consumer := invoiceInfra.NewKafkaInvoiceConsumer(brokers, topic, groupID, uc.ConsumeInvoiceMessage)
+	consumer := invoiceRepo.NewKafkaInvoiceConsumer(brokers, topic, groupID, uc.ConsumeInvoiceMessage)
 	ctx := context.Background()
 	log.Printf("Kafka invoice consumer started (topic: %s, group: %s)", topic, groupID)
 	consumer.Start(ctx)
@@ -89,7 +89,7 @@ func setupRouter(db *sql.DB) *mux.Router {
 	orderUsecase := orderUsecase.NewOrderUseCase(orderRepo)
 	httpHandler.NewOrderHandler(protected, orderUsecase)
 
-	invoiceRepo := invoiceInfra.NewPostgresInvoiceRepository(db)
+	invoiceRepo := invoiceRepo.NewPostgresInvoiceRepository(db)
 	httpHandler.NewInvoiceHandler(protected, invoiceRepo)
 
 	return router

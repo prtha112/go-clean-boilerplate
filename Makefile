@@ -5,11 +5,13 @@
 test:
 	go test ./...
 
-test-order:
-	go test ./internal/usecase/order
+compose:
+	docker-compose down
+	rm -rf pgdata
+	docker-compose up -d --build
 
-test-user:
-	go test ./internal/usecase/user
+db-login:
+	docker exec -it postgresdb psql -U mock -d mockdb
 
-test-invoice:
-	go test ./internal/usecase/invoice
+get-jwt:
+	go run ./scriptsget-jwt.go

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	userRepo "go-clean-architecture/internal/infrastructure/user"
+	userUsecase "go-clean-architecture/internal/usecase/user"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
@@ -31,7 +32,8 @@ func NewAuthHandler(router *mux.Router, db *sql.DB) {
 			return
 		}
 		repo := userRepo.NewPostgresUserRepository(db)
-		user, err := repo.GetByUsernameAndPassword(req.Username, req.Password)
+		uc := userUsecase.NewUserUseCase(repo)
+		user, err := uc.Login(req.Username, req.Password)
 		if err != nil {
 			http.Error(w, "invalid credentials", http.StatusUnauthorized)
 			return

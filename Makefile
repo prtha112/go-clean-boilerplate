@@ -6,9 +6,9 @@ test:
 	go test ./internal/usecase/...
 
 compose:
-	docker-compose down
+	docker compose down
 	rm -rf pgdata
-	docker-compose up -d --build
+	docker compose up -d --build
 
 db-login:
 	docker exec -it postgresdb psql -U mock -d mockdb

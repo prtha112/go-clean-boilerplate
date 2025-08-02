@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	domain "go-clean-architecture/internal/domain/invoice"
+	"log"
 )
 
 type PostgresInvoiceRepository struct {
@@ -16,9 +17,15 @@ func NewPostgresInvoiceRepository(db *sql.DB) *PostgresInvoiceRepository {
 
 func (r *PostgresInvoiceRepository) CreateInvoice(invoice *domain.Invoice) error {
 	_, err := r.DB.ExecContext(context.Background(),
-		`INSERT INTO invoices (id, order_id, amount, created_at) VALUES ($1, $2, $3, $4)`,
-		invoice.ID, invoice.OrderID, invoice.Amount, invoice.CreatedAt,
+		`INSERT INTO invoices (order_id, amount) VALUES ($1, $2)`,
+		invoice.OrderID, invoice.Amount,
 	)
+	if err != nil {
+		// log error and input for investigation
+		log.Printf("CreateInvoice error: %v | order_id=%v amount=%v", err, invoice.OrderID, invoice.Amount)
+	} else {
+		log.Printf("CreateInvoice success | order_id=%v amount=%v", invoice.OrderID, invoice.Amount)
+	}
 	return err
 }
 

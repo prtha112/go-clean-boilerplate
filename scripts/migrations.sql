@@ -8,6 +8,12 @@ CREATE TABLE IF NOT EXISTS users (
     username TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS invoices (
+    id SERIAL PRIMARY KEY,
+    order_id TEXT NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 INSERT INTO orders (item, amount) VALUES ('Banana', 10);
 INSERT INTO orders (item, amount) VALUES ('Apple', 5);
 INSERT INTO orders (item, amount) VALUES ('Orange', 7);

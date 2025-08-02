@@ -72,12 +72,7 @@ curl -H "Authorization: Bearer <jwt-token>" http://localhost:8085/users/1
 
 ### 3. Example JSON for Invoice (produce to Kafka)
 ```json
-{
-  "id": "sojvp-001",
-  "order_id": "order-123",
-  "amount": 999.99,
-  "created_at": 1722120000
-}
+{"order_id": "order-123","amount": 999.99}
 ```
 
 ## JWT

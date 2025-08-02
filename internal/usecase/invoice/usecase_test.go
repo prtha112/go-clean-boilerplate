@@ -18,7 +18,7 @@ func (m *mockRepo) CreateInvoice(invoice *domain.Invoice) error {
 func TestConsumeInvoiceMessage(t *testing.T) {
 	repo := &mockRepo{}
 	uc := NewInvoiceUseCase(repo)
-	inv := domain.Invoice{ID: "1", OrderID: "2", Amount: 100, CreatedAt: 123456}
+	inv := domain.Invoice{OrderID: "2", Amount: 100, CreatedAt: 123456}
 	msg, _ := json.Marshal(inv)
 	err := uc.ConsumeInvoiceMessage(msg)
 	if err != nil {

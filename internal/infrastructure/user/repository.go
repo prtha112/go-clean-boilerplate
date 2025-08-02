@@ -17,21 +17,6 @@ func NewPostgresUserRepository(db *sql.DB) domain.Repository {
 	return &PostgresUserRepository{DB: db}
 }
 
-func (r *PostgresUserRepository) GetByID(id int) (*domain.User, error) {
-	row := r.DB.QueryRowContext(context.Background(), "SELECT id, username, password FROM users WHERE id = $1", id)
-	var user domain.User
-	if err := row.Scan(&user.ID, &user.Name, &user.Password); err != nil {
-		return nil, errors.New("user not found")
-	}
-	return &user, nil
-}
-
-func (r *PostgresUserRepository) Create(user *domain.User) error {
-	hashed := config.GenerateHashPassword(user.Password)
-	log.Printf("CreateUser: raw=%s hashed=%s", user.Password, hashed)
-	return r.DB.QueryRowContext(context.Background(), "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id", user.Name, hashed).Scan(&user.ID)
-}
-
 func (r *PostgresUserRepository) GetByUsernameAndPassword(username, password string) (*domain.User, error) {
 	row := r.DB.QueryRowContext(context.Background(), "SELECT id, username, password FROM users WHERE username = $1", username)
 	var user domain.User

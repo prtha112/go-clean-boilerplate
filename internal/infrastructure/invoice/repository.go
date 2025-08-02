@@ -3,16 +3,42 @@ package invoice
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	domain "go-clean-architecture/internal/domain/invoice"
 	"log"
+	"os"
+
+	"github.com/segmentio/kafka-go"
 )
 
 type PostgresInvoiceRepository struct {
-	DB *sql.DB
+	DB     *sql.DB
+	Writer *kafka.Writer
 }
 
 func NewPostgresInvoiceRepository(db *sql.DB) *PostgresInvoiceRepository {
-	return &PostgresInvoiceRepository{DB: db}
+	broker := os.Getenv("KAFKA_BROKER")
+	if broker == "" {
+		broker = "localhost:9092"
+	}
+	topic := os.Getenv("KAFKA_INVOICE_TOPIC")
+	if topic == "" {
+		topic = "invoice-topic"
+	}
+	writer := kafka.NewWriter(kafka.WriterConfig{
+		Brokers:  []string{broker},
+		Topic:    topic,
+		Balancer: &kafka.LeastBytes{},
+	})
+	return &PostgresInvoiceRepository{DB: db, Writer: writer}
+}
+
+// Close releases resources for PostgresInvoiceRepository (including Kafka writer)
+func (r *PostgresInvoiceRepository) Close() error {
+	if r.Writer != nil {
+		return r.Writer.Close()
+	}
+	return nil
 }
 
 func (r *PostgresInvoiceRepository) CreateInvoice(invoice *domain.Invoice) error {
@@ -31,8 +57,22 @@ func (r *PostgresInvoiceRepository) CreateInvoice(invoice *domain.Invoice) error
 
 // PublishInvoiceMessage implements invoice.Repository.
 func (r *PostgresInvoiceRepository) PublishInvoiceMessage(msg []byte) error {
-	// No-op for Postgres, just log for interface compliance
-	log.Printf("PublishInvoiceMessage called (noop): %s", string(msg))
+	// Use inv.ID as key if possible, else empty
+	var key []byte
+	var inv domain.Invoice
+	if err := json.Unmarshal(msg, &inv); err == nil {
+		key = []byte(inv.ID)
+	}
+
+	err := r.Writer.WriteMessages(context.Background(), kafka.Message{
+		Key:   key,
+		Value: msg,
+	})
+	if err != nil {
+		log.Printf("PublishInvoiceMessage error: %v", err)
+		return err
+	}
+	log.Printf("PublishInvoiceMessage success: %s", string(msg))
 	return nil
 }
 

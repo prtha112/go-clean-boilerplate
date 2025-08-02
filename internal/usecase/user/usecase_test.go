@@ -14,6 +14,7 @@ import (
 type mockRepo struct {
 	GetByIDFunc func(int) (*user.User, error)
 	CreateFunc  func(*user.User) error
+	GetByUsernameAndPasswordFunc func(string, string) (*user.User, error)
 }
 
 func (m *mockRepo) GetByID(id int) (*user.User, error) {
@@ -22,6 +23,13 @@ func (m *mockRepo) GetByID(id int) (*user.User, error) {
 
 func (m *mockRepo) Create(u *user.User) error {
 	return m.CreateFunc(u)
+}
+
+func (m *mockRepo) GetByUsernameAndPassword(username, password string) (*user.User, error) {
+	if m.GetByUsernameAndPasswordFunc != nil {
+		return m.GetByUsernameAndPasswordFunc(username, password)
+	}
+	return nil, errors.New("not implemented")
 }
 
 func TestGetUser_Success(t *testing.T) {

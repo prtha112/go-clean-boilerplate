@@ -4,8 +4,8 @@ POST http://localhost:8085/login
 Content-Type: application/json
 
 {
-  "username": "admin",
-  "password": "password"
+  "username": "user1",
+  "password": "password1"
 }
 
 ### 📦 Get All Orders using token from login

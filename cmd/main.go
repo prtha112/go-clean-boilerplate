@@ -148,7 +148,7 @@ func setupRouter(db *sql.DB) *mux.Router {
 	router := httpHandler.NewRouter()
 
 	// Public endpoints
-	httpHandler.NewAuthHandler(router) // /login (no JWT required)
+	httpHandler.NewAuthHandler(router, db) // /login (no JWT required)
 
 	// Protected endpoints (JWT)
 	protected := router.PathPrefix("/").Subrouter()

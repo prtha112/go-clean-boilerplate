@@ -17,10 +17,8 @@ import (
 	_ "github.com/lib/pq"
 
 	orderRepo "go-clean-architecture/internal/infrastructure/order"
-	userRepo "go-clean-architecture/internal/infrastructure/user"
 	httpHandler "go-clean-architecture/internal/interface/http"
 	orderUsecase "go-clean-architecture/internal/usecase/order"
-	userUsecase "go-clean-architecture/internal/usecase/user"
 )
 
 // main is the application entrypoint. Selects mode by argument.
@@ -153,10 +151,6 @@ func setupRouter(db *sql.DB) *mux.Router {
 	// Protected endpoints (JWT)
 	protected := router.PathPrefix("/").Subrouter()
 	protected.Use(httpHandler.JWTMiddleware)
-
-	uRepo := userRepo.NewUserRepository()
-	uUC := userUsecase.NewUserUseCase(uRepo)
-	httpHandler.NewUserHandler(protected, uUC)
 
 	oRepo := orderRepo.NewOrderRepository(db)
 	oUC := orderUsecase.NewOrderUseCase(oRepo)

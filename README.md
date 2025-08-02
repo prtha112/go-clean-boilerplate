@@ -47,8 +47,6 @@ go-clean-boilerplate/
 
 ## REST API Endpoints
 - POST   /login                (get JWT, no token required)
-- GET    /users/{id}           (JWT required)
-- POST   /users                (JWT required)
 - GET    /orders/{id}          (JWT required)
 - DELETE /orders/{id}          (JWT required)
 - GET    /orders               (JWT required)

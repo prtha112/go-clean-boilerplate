@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	config "go-clean-architecture/config"
 	domain "go-clean-architecture/internal/domain/user"
+	"log"
 )
 
 type PostgresUserRepository struct {
@@ -25,14 +27,23 @@ func (r *PostgresUserRepository) GetByID(id int) (*domain.User, error) {
 }
 
 func (r *PostgresUserRepository) Create(user *domain.User) error {
-	return r.DB.QueryRowContext(context.Background(), "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id", user.Name, user.Password).Scan(&user.ID)
+	hashed := config.GenerateHashPassword(user.Password)
+	log.Printf("CreateUser: raw=%s hashed=%s", user.Password, hashed)
+	return r.DB.QueryRowContext(context.Background(), "INSERT INTO users (username, password) VALUES ($1, $2) RETURNING id", user.Name, hashed).Scan(&user.ID)
 }
 
 func (r *PostgresUserRepository) GetByUsernameAndPassword(username, password string) (*domain.User, error) {
-	row := r.DB.QueryRowContext(context.Background(), "SELECT id, username, password FROM users WHERE username = $1 AND password = $2", username, password)
+	row := r.DB.QueryRowContext(context.Background(), "SELECT id, username, password FROM users WHERE username = $1", username)
 	var user domain.User
 	if err := row.Scan(&user.ID, &user.Name, &user.Password); err != nil {
+		log.Printf("Login failed for username=%s", username)
 		return nil, errors.New("invalid credentials")
 	}
+	log.Printf("Login: raw=%s db_hash=%s", password, user.Password)
+	if !config.VerifyPassword(user.Password, password) {
+		log.Printf("Login failed: password mismatch for username=%s", username)
+		return nil, errors.New("invalid credentials")
+	}
+	log.Printf("Login success for username=%s", username)
 	return &user, nil
 }

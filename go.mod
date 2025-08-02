@@ -9,6 +9,7 @@ require (
 	github.com/lib/pq v1.10.9
 	github.com/segmentio/kafka-go v0.4.48
 	github.com/stretchr/testify v1.10.0
+	golang.org/x/crypto v0.14.0
 )
 
 require (

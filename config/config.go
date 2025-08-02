@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/gorilla/mux"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // config holds application configuration.
@@ -81,4 +82,25 @@ func PrintRoutes(router *mux.Router) {
 func PrintUsageAndExit() {
 	log.Println("Usage: ./app [restapi|consume-invoice]")
 	os.Exit(1)
+}
+
+func GenerateHashPassword(password string) string {
+	// Placeholder for password hashing logic
+	// In production, use a secure hashing algorithm like bcrypt
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.MinCost)
+	if err != nil {
+		log.Println(err)
+	}
+	return string(hashedPassword)
+}
+
+func VerifyPassword(hashedPassword string, password string) bool {
+	// Placeholder for password verification logic
+	// In production, use a secure hashing algorithm like bcrypt
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	if err != nil {
+		log.Println(err)
+		return false
+	}
+	return true
 }

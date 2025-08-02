@@ -2,6 +2,93 @@
 
 Production-ready Go boilerplate using Clean Architecture, REST API, Kafka, JWT, and Docker.
 
+## Architecture Diagram
+
+```mermaid
+graph TB
+    %% External Systems
+    Client[Client Application]
+    Kafka[Apache Kafka]
+    DB[(PostgreSQL Database)]
+    
+    %% Main Application Entry Points
+    Main[main.go<br/>Entry Point]
+    
+    %% REST API Server Components
+    subgraph "REST API Server (restapi mode)"
+        Router[HTTP Router<br/>Gorilla Mux]
+        
+        %% Authentication
+        AuthHandler[Auth Handler<br/>/login endpoint]
+        JWTMiddleware[JWT Middleware<br/>Token Validation]
+        
+        %% Protected Handlers
+        OrderHandler[Order Handler<br/>Protected Routes]
+        InvoiceHandler[Invoice Handler<br/>Protected Routes<br/>Kafka Producer]
+    end
+    
+    %% Consumer Process
+    subgraph "Kafka Consumer (consume-invoice mode)"
+        KafkaConsumer[Kafka Invoice Consumer<br/>Separate Process]
+    end
+    
+    %% Use Cases Layer
+    subgraph "Use Cases (Business Logic)"
+        OrderUsecase[Order UseCase]
+        InvoiceUsecase[Invoice UseCase]
+    end
+    
+    %% Repository Layer
+    subgraph "Repository Layer (Infrastructure)"
+        OrderRepo[Order Repository<br/>PostgreSQL]
+        InvoiceRepo[Invoice Repository<br/>PostgreSQL]
+        KafkaProducer[Kafka Producer<br/>Invoice Events]
+    end
+    
+    %% Client Flow
+    Client -->|HTTP Requests| Router
+    
+    %% Authentication Flow
+    Router --> AuthHandler
+    AuthHandler -->|Generate JWT| Client
+    Router --> JWTMiddleware
+    JWTMiddleware -->|Validate Token| OrderHandler
+    JWTMiddleware -->|Validate Token| InvoiceHandler
+    
+    %% Order Flow
+    OrderHandler --> OrderUsecase
+    OrderUsecase --> OrderRepo
+    OrderRepo --> DB
+    
+    %% Invoice Flow (REST API)
+    InvoiceHandler --> InvoiceRepo
+    InvoiceHandler --> KafkaProducer
+    KafkaProducer -->|Produce Messages| Kafka
+    
+    %% Invoice Flow (Consumer)
+    Kafka -->|Consume Messages| KafkaConsumer
+    KafkaConsumer --> InvoiceUsecase
+    InvoiceUsecase --> InvoiceRepo
+    InvoiceRepo --> DB
+    
+    %% Main Entry Point
+    Main -->|"restapi" arg| Router
+    Main -->|"consume-invoice" arg| KafkaConsumer
+    
+    %% Styling
+    classDef handler fill:#e1f5fe
+    classDef usecase fill:#f3e5f5
+    classDef repo fill:#e8f5e8
+    classDef external fill:#fff3e0
+    classDef main fill:#ffebee
+    
+    class AuthHandler,OrderHandler,InvoiceHandler handler
+    class OrderUsecase,InvoiceUsecase usecase
+    class OrderRepo,InvoiceRepo,KafkaProducer repo
+    class Client,Kafka,DB external
+    class Main,KafkaConsumer main
+```
+
 ## Features
 - Clean Architecture (domain/usecase/infrastructure/interface separation)
 - REST API (CRUD for User, Order, Invoice)

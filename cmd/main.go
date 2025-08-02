@@ -9,7 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 
-	config "go-clean-architecture/internal/config"
+	config "go-clean-architecture/config"
 	invoiceInfra "go-clean-architecture/internal/infrastructure/invoice"
 	invoiceUsecase "go-clean-architecture/internal/usecase/invoice"
 

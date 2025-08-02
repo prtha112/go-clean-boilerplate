@@ -1,0 +1,33 @@
+## Login get jwt token
+# @name login
+POST http://localhost:8085/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "password"
+}
+
+### 📦 Get All Orders using token from login
+GET http://localhost:8085/orders
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+### 📦 Get Order by ID using token from login
+GET http://localhost:8085/orders/1
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+### 📦 Create a new order using token from login
+POST http://localhost:8085/orders
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+    "item": "Banana",
+    "amount": 30
+}
+
+### 📦 Get Order by ID using token from login
+DELETE http://localhost:8085/orders/4
+Authorization: Bearer {{login.response.body.token}}

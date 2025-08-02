@@ -20,6 +20,8 @@ jobs:
         run: go mod tidy
       - name: Run tests
         run: make test
+      - name: Set up Docker Compose
+        uses: docker/setup-compose-action@v1
       - name: Run compose
         run: make compose
       - name: Sleep for 10 seconds

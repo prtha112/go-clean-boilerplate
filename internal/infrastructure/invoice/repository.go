@@ -10,6 +10,7 @@ import (
 
 	"github.com/segmentio/kafka-go"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type PostgresInvoiceRepository struct {
@@ -38,18 +39,26 @@ func (r *PostgresInvoiceRepository) CreateInvoice(invoice *domain.Invoice) error
 // PublishInvoiceMessage implements invoice.Repository.
 func (r *PostgresInvoiceRepository) PublishInvoiceMessage(ctx context.Context, msg []byte) error {
 	// Use inv.ID as key if possible, else empty
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("attrA", "chocolate"),
+		attribute.String("attrB", "raspberry"),
+		attribute.String("attrC", "vanilla"),
+	}
+
 	tr := otel.Tracer("invoiceRepository")
 	ctx, span := tr.Start(ctx, "PublishInvoiceMessage")
+	span.SetAttributes(commonAttrs...)
 	defer span.End()
 	var key []byte
 	var inv domain.Invoice
 
 	// ✅ Unmarshal invoice to get ID for key
 	func() {
-		_, span := tr.Start(ctx, "Unmarshal invoice")
+		_, span := tr.Start(ctx, "Unmarshal invoice") // ใช้ ctx ใหม่
+		span.SetAttributes(commonAttrs...)
 		defer span.End()
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(3 * time.Second)
 		if err := json.Unmarshal(msg, &inv); err == nil {
 			key = []byte(inv.ID)
 		}
@@ -57,7 +66,8 @@ func (r *PostgresInvoiceRepository) PublishInvoiceMessage(ctx context.Context, m
 
 	// ✅ Start Kafka span
 	func() {
-		_, span := tr.Start(ctx, "Write message to Kafka")
+		ctx, span := tr.Start(ctx, "Write message to Kafka") // ใช้ ctx ใหม่
+		span.SetAttributes(commonAttrs...)
 		defer span.End()
 
 		err := r.Writer.WriteMessages(ctx, kafka.Message{

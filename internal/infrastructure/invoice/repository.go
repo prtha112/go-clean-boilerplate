@@ -47,16 +47,16 @@ func (r *PostgresInvoiceRepository) PublishInvoiceMessage(ctx context.Context, m
 
 	tr := otel.Tracer("invoiceRepository")
 	ctx, span := tr.Start(ctx, "PublishInvoiceMessage")
-	span.SetAttributes(commonAttrs...)
 	defer span.End()
+	span.SetAttributes(commonAttrs...)
 	var key []byte
 	var inv domain.Invoice
 
 	// ✅ Unmarshal invoice to get ID for key
 	func() {
 		_, span := tr.Start(ctx, "Unmarshal invoice") // ใช้ ctx ใหม่
-		span.SetAttributes(commonAttrs...)
 		defer span.End()
+		span.SetAttributes(commonAttrs...)
 
 		time.Sleep(3 * time.Second)
 		if err := json.Unmarshal(msg, &inv); err == nil {
@@ -67,8 +67,8 @@ func (r *PostgresInvoiceRepository) PublishInvoiceMessage(ctx context.Context, m
 	// ✅ Start Kafka span
 	func() {
 		ctx, span := tr.Start(ctx, "Write message to Kafka") // ใช้ ctx ใหม่
-		span.SetAttributes(commonAttrs...)
 		defer span.End()
+		span.SetAttributes(commonAttrs...)
 
 		err := r.Writer.WriteMessages(ctx, kafka.Message{
 			Key:   key,

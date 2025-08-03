@@ -47,7 +47,7 @@ func runRESTServer() {
 	db := config.MustSetupDatabase(cfg)
 	kafka := config.MustSetupKafkaProducer(cfgKafka)
 
-	otelTracer := config.MustSetupOtelTracer(cfgOtel.OTEL_SERVICE_NAME, ctx)
+	otelTracer := config.MustSetupOtelTracer(cfgOtel, ctx)
 	defer otelTracer(ctx)
 
 	defer func() {

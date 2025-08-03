@@ -208,9 +208,9 @@ func GenerateID() string {
 	return "inv-" + time.Now().Format("20060102150405")
 }
 
-func MustSetupOtelTracer(serviceName string, ctx context.Context) func(context.Context) error {
+func MustSetupOtelTracer(cfg *OtelConfig, ctx context.Context) func(context.Context) error {
 	// exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
-	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpoint("localhost:4317"))
+	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpoint(cfg.OTEL_EXPORTER_OTLP_ENDPOINT))
 	if err != nil {
 		log.Fatalf("failed to initialize exporter: %v", err)
 	}
@@ -219,7 +219,7 @@ func MustSetupOtelTracer(serviceName string, ctx context.Context) func(context.C
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,
-			semconv.ServiceName(serviceName),
+			semconv.ServiceName(cfg.OTEL_SERVICE_NAME),
 		)),
 	)
 

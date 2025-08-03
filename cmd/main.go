@@ -69,19 +69,26 @@ func runInvoiceKafkaConsumer() {
 	cfg := config.MustLoadConfig()
 	cfgKafka := config.MustLoadConfigKafkaInvoice()
 	db := config.MustSetupDatabase(cfg)
-	kafkaProducer := config.MustSetupKafkaProducer(cfgKafka)
-	kafkaConsumer := config.MustSetupKafkaConsumer(cfgKafka)
 	defer func() {
 		if err := db.Close(); err != nil {
 			log.Printf("error closing db: %v", err)
 		}
 	}()
-	invoiceRepoInstance := invoiceRepo.NewPostgresInvoiceRepository(db, kafkaProducer)
-	invoiceUsecaseInstance := invoiceUsecase.NewInvoiceUseCase(invoiceRepoInstance)
-	consumer := invoiceRepo.NewKafkaInvoiceConsumer(kafkaConsumer, invoiceUsecaseInstance.ConsumeInvoiceMessage)
+
+	// Setup infrastructure dependencies
+	kafkaProducer := config.MustSetupKafkaProducer(cfgKafka)
+	kafkaConsumer := config.MustSetupKafkaConsumer(cfgKafka)
+
+	// Setup domain/repository/usecase
+	invoiceRepository := invoiceRepo.NewPostgresInvoiceRepository(db, kafkaProducer)
+	invoiceUsecase := invoiceUsecase.NewInvoiceUseCase(invoiceRepository)
+
+	// Setup consumer (infrastructure, inject usecase)
+	invoiceConsumer := invoiceRepo.NewKafkaInvoiceConsumer(kafkaConsumer, invoiceUsecase.ConsumeInvoiceMessage)
+
 	ctx := context.Background()
 	log.Printf("Kafka invoice consumer started")
-	consumer.Start(ctx)
+	invoiceConsumer.Start(ctx)
 }
 
 // setupRouter wires up all HTTP handlers and returns the router.

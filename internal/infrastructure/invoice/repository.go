@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	domain "go-clean-architecture/internal/domain/invoice"
 	"log"
-	"os"
 
 	"github.com/segmentio/kafka-go"
 )
@@ -16,20 +15,7 @@ type PostgresInvoiceRepository struct {
 	Writer *kafka.Writer
 }
 
-func NewPostgresInvoiceRepository(db *sql.DB) *PostgresInvoiceRepository {
-	broker := os.Getenv("KAFKA_BROKER")
-	if broker == "" {
-		broker = "localhost:9092"
-	}
-	topic := os.Getenv("KAFKA_INVOICE_TOPIC")
-	if topic == "" {
-		topic = "invoice-topic"
-	}
-	writer := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  []string{broker},
-		Topic:    topic,
-		Balancer: &kafka.LeastBytes{},
-	})
+func NewPostgresInvoiceRepository(db *sql.DB, writer *kafka.Writer) *PostgresInvoiceRepository {
 	return &PostgresInvoiceRepository{DB: db, Writer: writer}
 }
 

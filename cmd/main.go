@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/segmentio/kafka-go"
 
 	config "go-clean-architecture/config"
 	invoiceRepo "go-clean-architecture/internal/infrastructure/invoice"
@@ -40,13 +41,15 @@ func main() {
 // runRESTServer starts the HTTP REST API server.
 func runRESTServer() {
 	cfg := config.MustLoadConfig()
+	cfgKafka := config.MustLoadConfigKafkaInvoice()
 	db := config.MustSetupDatabase(cfg)
+	kafka := config.MustSetupKafkaProducer(cfgKafka)
 	defer func() {
 		if err := db.Close(); err != nil {
 			log.Printf("error closing db: %v", err)
 		}
 	}()
-	router := setupRouter(db)
+	router := setupRouter(db, kafka)
 	config.PrintRoutes(router)
 	log.Printf("REST API listening on :%s", cfg.Port)
 	if err := http.ListenAndServe(":"+cfg.Port, router); err != nil {
@@ -57,7 +60,9 @@ func runRESTServer() {
 // runInvoiceKafkaConsumer starts the Kafka consumer for invoice events.
 func runInvoiceKafkaConsumer() {
 	cfg := config.MustLoadConfig()
+	cfgKafka := config.MustLoadConfigKafkaInvoice()
 	db := config.MustSetupDatabase(cfg)
+	kafka := config.MustSetupKafkaProducer(cfgKafka)
 	defer func() {
 		if err := db.Close(); err != nil {
 			log.Printf("error closing db: %v", err)
@@ -66,16 +71,16 @@ func runInvoiceKafkaConsumer() {
 	brokers := []string{config.GetEnv("KAFKA_BROKER", "localhost:9092")}
 	topic := config.GetEnv("KAFKA_INVOICE_TOPIC", "invoice-topic")
 	groupID := config.GetEnv("KAFKA_INVOICE_GROUP", "invoice-group")
-	repo := invoiceRepo.NewPostgresInvoiceRepository(db)
-	uc := invoiceUsecase.NewInvoiceUseCase(repo)
-	consumer := invoiceRepo.NewKafkaInvoiceConsumer(brokers, topic, groupID, uc.ConsumeInvoiceMessage)
+	invoiceRepoInstance := invoiceRepo.NewPostgresInvoiceRepository(db, kafka)
+	invoiceUsecaseInstance := invoiceUsecase.NewInvoiceUseCase(invoiceRepoInstance)
+	consumer := invoiceRepo.NewKafkaInvoiceConsumer(brokers, topic, groupID, invoiceUsecaseInstance.ConsumeInvoiceMessage)
 	ctx := context.Background()
 	log.Printf("Kafka invoice consumer started (topic: %s, group: %s)", topic, groupID)
 	consumer.Start(ctx)
 }
 
 // setupRouter wires up all HTTP handlers and returns the router.
-func setupRouter(db *sql.DB) *mux.Router {
+func setupRouter(db *sql.DB, kafka *kafka.Writer) *mux.Router {
 	router := httpHandler.NewRouter()
 
 	// Public endpoints
@@ -89,7 +94,7 @@ func setupRouter(db *sql.DB) *mux.Router {
 	orderUsecase := orderUsecase.NewOrderUseCase(orderRepo)
 	httpHandler.NewOrderHandler(protected, orderUsecase)
 
-	invoiceRepo := invoiceRepo.NewPostgresInvoiceRepository(db)
+	invoiceRepo := invoiceRepo.NewPostgresInvoiceRepository(db, kafka)
 	httpHandler.NewInvoiceHandler(protected, invoiceRepo)
 
 	return router

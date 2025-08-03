@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/sasl/plain"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -20,6 +22,14 @@ type Config struct {
 	PGDB       string
 	PGSSL      string
 	Port       string
+}
+
+type KafkaConfig struct {
+	KAFKA_BROKER        string
+	KAFKA_INVOICE_TOPIC string
+	KAFKA_INVOICE_GROUP string
+	KAFKA_USERNAME      string
+	KAFKA_PASSWORD      string
 }
 
 // mustLoadConfig loads config and validates required fields.
@@ -40,6 +50,20 @@ func MustLoadConfig() *Config {
 	return cfg
 }
 
+func MustLoadConfigKafkaInvoice() *KafkaConfig {
+	cfg := &KafkaConfig{
+		KAFKA_BROKER:        GetEnv("KAFKA_BROKER", "localhost:9092"),
+		KAFKA_INVOICE_TOPIC: GetEnv("KAFKA_INVOICE_TOPIC", "invoice-topic"),
+		KAFKA_INVOICE_GROUP: GetEnv("KAFKA_INVOICE_GROUP", "invoice-group"),
+		KAFKA_USERNAME:      GetEnv("KAFKA_USERNAME", ""),
+		KAFKA_PASSWORD:      GetEnv("KAFKA_PASSWORD", ""),
+	}
+	if cfg.KAFKA_BROKER == "" || cfg.KAFKA_INVOICE_TOPIC == "" || cfg.KAFKA_INVOICE_GROUP == "" {
+		log.Fatal("Kafka config is required (KAFKA_BROKER, KAFKA_INVOICE_TOPIC, KAFKA_INVOICE_GROUP)")
+	}
+	return cfg
+}
+
 // mustSetupDatabase opens a postgres connection or exits on error.
 func MustSetupDatabase(cfg *Config) *sql.DB {
 	dsn := fmt.Sprintf(
@@ -55,6 +79,29 @@ func MustSetupDatabase(cfg *Config) *sql.DB {
 		log.Fatalf("cannot ping postgres: %v", err)
 	}
 	return db
+}
+
+func MustSetupKafkaProducer(cfg *KafkaConfig) *kafka.Writer {
+	broker := cfg.KAFKA_BROKER
+	topic := cfg.KAFKA_INVOICE_TOPIC
+	username := cfg.KAFKA_USERNAME
+	password := cfg.KAFKA_PASSWORD
+	var dialer *kafka.Dialer
+	if username != "" && password != "" {
+		dialer = &kafka.Dialer{
+			SASLMechanism: plain.Mechanism{
+				Username: username,
+				Password: password,
+			},
+		}
+	}
+	writer := kafka.NewWriter(kafka.WriterConfig{
+		Brokers:  []string{broker},
+		Topic:    topic,
+		Balancer: &kafka.LeastBytes{},
+		Dialer:   dialer,
+	})
+	return writer
 }
 
 // getEnv returns the value of the environment variable or fallback if not set.

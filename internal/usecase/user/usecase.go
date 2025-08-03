@@ -1,17 +1,17 @@
 package user
 
 import (
-	"go-clean-architecture/internal/domain/user"
+	domain "go-clean-architecture/internal/domain/user"
 )
 
-type UseCase struct {
-	repo user.Repository
+type useCase struct {
+	repo domain.Repository
 }
 
-func NewUserUseCase(repo user.Repository) *UseCase {
-	return &UseCase{repo: repo}
+func NewUserUseCase(repo domain.Repository) *useCase {
+	return &useCase{repo: repo}
 }
 
-func (uc *UseCase) Login(user user.User) (*user.User, error) {
+func (uc *useCase) Login(user domain.User) (*domain.User, error) {
 	return uc.repo.GetByUsernameAndPassword(user.Username, user.Password)
 }

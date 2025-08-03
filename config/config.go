@@ -104,6 +104,33 @@ func MustSetupKafkaProducer(cfg *KafkaConfig) *kafka.Writer {
 	return writer
 }
 
+func MustSetupKafkaConsumer(cfg *KafkaConfig) *kafka.Reader {
+	broker := cfg.KAFKA_BROKER
+	topic := cfg.KAFKA_INVOICE_TOPIC
+	groupID := cfg.KAFKA_INVOICE_GROUP
+	username := cfg.KAFKA_USERNAME
+	password := cfg.KAFKA_PASSWORD
+
+	var dialer *kafka.Dialer
+	if username != "" && password != "" {
+		dialer = &kafka.Dialer{
+			SASLMechanism: plain.Mechanism{
+				Username: username,
+				Password: password,
+			},
+		}
+	}
+
+	readerConfig := kafka.ReaderConfig{
+		Brokers: []string{broker},
+		Topic:   topic,
+		GroupID: groupID,
+		Dialer:  dialer,
+		MaxWait: 10 * time.Second, // Adjust as needed
+	}
+	return kafka.NewReader(readerConfig)
+}
+
 // getEnv returns the value of the environment variable or fallback if not set.
 func GetEnv(key, fallback string) string {
 	if value := os.Getenv(key); value != "" {

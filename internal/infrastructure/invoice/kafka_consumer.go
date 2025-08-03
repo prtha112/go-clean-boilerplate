@@ -3,10 +3,8 @@ package invoice
 import (
 	"context"
 	"log"
-	"os"
 
 	"github.com/segmentio/kafka-go"
-	"github.com/segmentio/kafka-go/sasl/plain"
 )
 
 type KafkaInvoiceConsumer struct {
@@ -14,30 +12,7 @@ type KafkaInvoiceConsumer struct {
 	Handler func(msg []byte) error
 }
 
-func NewKafkaInvoiceConsumer(brokers []string, topic, groupID string, handler func(msg []byte) error) *KafkaInvoiceConsumer {
-	username := os.Getenv("KAFKA_USERNAME")
-	password := os.Getenv("KAFKA_PASSWORD")
-
-	var dialer *kafka.Dialer
-	if username != "" && password != "" {
-		dialer = &kafka.Dialer{
-			SASLMechanism: plain.Mechanism{
-				Username: username,
-				Password: password,
-			},
-		}
-	}
-
-	readerConfig := kafka.ReaderConfig{
-		Brokers: brokers,
-		Topic:   topic,
-		GroupID: groupID,
-	}
-	if dialer != nil {
-		readerConfig.Dialer = dialer
-	}
-
-	reader := kafka.NewReader(readerConfig)
+func NewKafkaInvoiceConsumer(reader *kafka.Reader, handler func(msg []byte) error) *KafkaInvoiceConsumer {
 	return &KafkaInvoiceConsumer{
 		Reader:  reader,
 		Handler: handler,

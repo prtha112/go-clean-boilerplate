@@ -62,20 +62,18 @@ func runInvoiceKafkaConsumer() {
 	cfg := config.MustLoadConfig()
 	cfgKafka := config.MustLoadConfigKafkaInvoice()
 	db := config.MustSetupDatabase(cfg)
-	kafka := config.MustSetupKafkaProducer(cfgKafka)
+	kafkaProducer := config.MustSetupKafkaProducer(cfgKafka)
+	kafkaConsumer := config.MustSetupKafkaConsumer(cfgKafka)
 	defer func() {
 		if err := db.Close(); err != nil {
 			log.Printf("error closing db: %v", err)
 		}
 	}()
-	brokers := []string{config.GetEnv("KAFKA_BROKER", "localhost:9092")}
-	topic := config.GetEnv("KAFKA_INVOICE_TOPIC", "invoice-topic")
-	groupID := config.GetEnv("KAFKA_INVOICE_GROUP", "invoice-group")
-	invoiceRepoInstance := invoiceRepo.NewPostgresInvoiceRepository(db, kafka)
+	invoiceRepoInstance := invoiceRepo.NewPostgresInvoiceRepository(db, kafkaProducer)
 	invoiceUsecaseInstance := invoiceUsecase.NewInvoiceUseCase(invoiceRepoInstance)
-	consumer := invoiceRepo.NewKafkaInvoiceConsumer(brokers, topic, groupID, invoiceUsecaseInstance.ConsumeInvoiceMessage)
+	consumer := invoiceRepo.NewKafkaInvoiceConsumer(kafkaConsumer, invoiceUsecaseInstance.ConsumeInvoiceMessage)
 	ctx := context.Background()
-	log.Printf("Kafka invoice consumer started (topic: %s, group: %s)", topic, groupID)
+	log.Printf("Kafka invoice consumer started")
 	consumer.Start(ctx)
 }
 

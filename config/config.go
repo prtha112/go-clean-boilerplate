@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -10,6 +11,11 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/plain"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -30,6 +36,12 @@ type KafkaConfig struct {
 	KAFKA_INVOICE_GROUP string
 	KAFKA_USERNAME      string
 	KAFKA_PASSWORD      string
+}
+
+type OtelConfig struct {
+	OTEL_EXPORTER_OTLP_ENDPOINT string
+	OTEL_EXPORTER_OTLP_INSECURE bool
+	OTEL_SERVICE_NAME           string
 }
 
 // mustLoadConfig loads config and validates required fields.
@@ -60,6 +72,18 @@ func MustLoadConfigKafkaInvoice() *KafkaConfig {
 	}
 	if cfg.KAFKA_BROKER == "" || cfg.KAFKA_INVOICE_TOPIC == "" || cfg.KAFKA_INVOICE_GROUP == "" {
 		log.Fatal("Kafka config is required (KAFKA_BROKER, KAFKA_INVOICE_TOPIC, KAFKA_INVOICE_GROUP)")
+	}
+	return cfg
+}
+
+func MustLoadOtelConfig() *OtelConfig {
+	cfg := &OtelConfig{
+		OTEL_EXPORTER_OTLP_ENDPOINT: GetEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "localhost:4317"),
+		OTEL_EXPORTER_OTLP_INSECURE: GetEnv("OTEL_EXPORTER_OTLP_INSECURE", "true") == "true",
+		OTEL_SERVICE_NAME:           GetEnv("OTEL_SERVICE_NAME", "go-clean-architecture"),
+	}
+	if cfg.OTEL_EXPORTER_OTLP_ENDPOINT == "" || cfg.OTEL_SERVICE_NAME == "" {
+		log.Fatal("OpenTelemetry config is required (OTEL_EXPORTER_OTLP_ENDPOINT, OTEL_SERVICE_NAME)")
 	}
 	return cfg
 }
@@ -182,4 +206,24 @@ func VerifyPassword(hashedPassword string, password string) bool {
 
 func GenerateID() string {
 	return "inv-" + time.Now().Format("20060102150405")
+}
+
+func MustSetupOtelTracer(serviceName string, ctx context.Context) func(context.Context) error {
+	// exporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
+	exporter, err := otlptracegrpc.New(ctx, otlptracegrpc.WithInsecure(), otlptracegrpc.WithEndpoint("localhost:4317"))
+	if err != nil {
+		log.Fatalf("failed to initialize exporter: %v", err)
+	}
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceName(serviceName),
+		)),
+	)
+
+	otel.SetTracerProvider(tp)
+
+	return tp.Shutdown
 }

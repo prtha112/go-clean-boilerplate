@@ -25,6 +25,7 @@ func NewInvoiceHandler(router *mux.Router, repo invoice.Repository) {
 }
 
 func (h *InvoiceHandler) invoiceHandler(w http.ResponseWriter, r *http.Request) {
+
 	var inv invoice.Invoice
 	if err := json.NewDecoder(r.Body).Decode(&inv); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
@@ -37,7 +38,7 @@ func (h *InvoiceHandler) invoiceHandler(w http.ResponseWriter, r *http.Request) 
 		inv.CreatedAt = time.Now().Unix()
 	}
 
-	err := h.uc.ProduceInvoiceMessage(&inv)
+	err := h.uc.ProduceInvoiceMessage(r.Context(), &inv)
 	if err != nil {
 		log.Printf("produce error: %v", err)
 		http.Error(w, "produce error", http.StatusInternalServerError)

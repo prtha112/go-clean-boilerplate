@@ -1,6 +1,7 @@
 package invoice
 
 import (
+	"context"
 	"encoding/json"
 	domain "go-clean-architecture/internal/domain/invoice"
 )
@@ -22,12 +23,13 @@ func (u *invoiceUseCase) ConsumeInvoiceMessage(msg []byte) error {
 }
 
 // ProduceInvoiceMessage implements invoice.UseCase.
-func (u *invoiceUseCase) ProduceInvoiceMessage(invoice *domain.Invoice) error {
+func (u *invoiceUseCase) ProduceInvoiceMessage(ctx context.Context, invoice *domain.Invoice) error {
+	// Assume span already started in handler, just use ctx
 	data, err := json.Marshal(invoice)
 	if err != nil {
 		return err
 	}
-	return u.repo.PublishInvoiceMessage(data)
+	return u.repo.PublishInvoiceMessage(ctx, data)
 }
 
 var _ domain.UseCase = (*invoiceUseCase)(nil)

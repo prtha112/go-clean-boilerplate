@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	domain "go-clean-architecture/internal/domain/invoice"
 	"log"
+	"time"
 
 	"github.com/segmentio/kafka-go"
+	"go.opentelemetry.io/otel"
 )
 
 type PostgresInvoiceRepository struct {
@@ -34,23 +36,40 @@ func (r *PostgresInvoiceRepository) CreateInvoice(invoice *domain.Invoice) error
 }
 
 // PublishInvoiceMessage implements invoice.Repository.
-func (r *PostgresInvoiceRepository) PublishInvoiceMessage(msg []byte) error {
+func (r *PostgresInvoiceRepository) PublishInvoiceMessage(ctx context.Context, msg []byte) error {
 	// Use inv.ID as key if possible, else empty
+	tr := otel.Tracer("invoiceRepository")
+	ctx, span := tr.Start(ctx, "PublishInvoiceMessage")
+	defer span.End()
 	var key []byte
 	var inv domain.Invoice
-	if err := json.Unmarshal(msg, &inv); err == nil {
-		key = []byte(inv.ID)
-	}
 
-	err := r.Writer.WriteMessages(context.Background(), kafka.Message{
-		Key:   key,
-		Value: msg,
-	})
-	if err != nil {
-		log.Printf("PublishInvoiceMessage error: %v", err)
-		return err
-	}
-	log.Printf("PublishInvoiceMessage success: %s", string(msg))
+	// ✅ Unmarshal invoice to get ID for key
+	func() {
+		_, span := tr.Start(ctx, "Unmarshal invoice")
+		defer span.End()
+
+		time.Sleep(5 * time.Second)
+		if err := json.Unmarshal(msg, &inv); err == nil {
+			key = []byte(inv.ID)
+		}
+	}()
+
+	// ✅ Start Kafka span
+	func() {
+		_, span := tr.Start(ctx, "Write message to Kafka")
+		defer span.End()
+
+		err := r.Writer.WriteMessages(ctx, kafka.Message{
+			Key:   key,
+			Value: msg,
+		})
+		if err != nil {
+			log.Printf("PublishInvoiceMessage error: %v", err)
+		} else {
+			log.Printf("PublishInvoiceMessage success: %s", string(msg))
+		}
+	}()
 	return nil
 }
 

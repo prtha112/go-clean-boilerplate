@@ -1,6 +1,8 @@
 package invoice
 
+import "context"
+
 type Repository interface {
 	CreateInvoice(invoice *Invoice) error
-	PublishInvoiceMessage(msg []byte) error
+	PublishInvoiceMessage(ctx context.Context, msg []byte) error
 }

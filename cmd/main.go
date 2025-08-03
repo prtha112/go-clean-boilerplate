@@ -39,15 +39,23 @@ func main() {
 
 // runRESTServer starts the HTTP REST API server.
 func runRESTServer() {
+	ctx := context.Background()
+
 	cfg := config.MustLoadConfig()
 	cfgKafka := config.MustLoadConfigKafkaInvoice()
+	cfgOtel := config.MustLoadOtelConfig()
 	db := config.MustSetupDatabase(cfg)
 	kafka := config.MustSetupKafkaProducer(cfgKafka)
+
+	otelTracer := config.MustSetupOtelTracer(cfgOtel.OTEL_SERVICE_NAME, ctx)
+	defer otelTracer(ctx)
+
 	defer func() {
 		if err := db.Close(); err != nil {
 			log.Printf("error closing db: %v", err)
 		}
 	}()
+
 	router := setupRouter(db, kafka)
 	config.PrintRoutes(router)
 	log.Printf("REST API listening on :%s", cfg.Port)

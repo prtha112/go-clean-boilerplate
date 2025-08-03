@@ -27,7 +27,6 @@ func main() {
 	if len(os.Args) < 2 {
 		config.PrintUsageAndExit()
 	}
-
 	switch os.Args[1] {
 	case "restapi":
 		runRESTServer()

@@ -29,7 +29,6 @@ services:
       ZOOKEEPER_SERVERS: zoo1:2888:3888
     networks:
       - appnet
-
   kafka1:
     image: confluentinc/cp-kafka:7.8.0
     hostname: kafka1
@@ -54,6 +53,29 @@ services:
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
     depends_on:
       - zoo1
+    networks:
+      - appnet
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.131.0
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./observability/otel-collector.yaml:/etc/otel-collector.yaml
+    ports:
+      - 4317:4317
+    networks:
+      - appnet
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    volumes:
+      - ./observability/prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+    networks:
+      - appnet
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    ports:
+      - 16686:16686
     networks:
       - appnet
 

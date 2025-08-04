@@ -1,0 +1,10 @@
+DROP INDEX IF EXISTS idx_invoice_items_product_id;
+DROP INDEX IF EXISTS idx_invoice_items_invoice_id;
+DROP INDEX IF EXISTS idx_invoices_order_id;
+DROP INDEX IF EXISTS idx_invoices_issued_date;
+DROP INDEX IF EXISTS idx_invoices_due_date;
+DROP INDEX IF EXISTS idx_invoices_status;
+DROP INDEX IF EXISTS idx_invoices_customer_email;
+DROP INDEX IF EXISTS idx_invoices_invoice_number;
+DROP TABLE IF EXISTS invoice_items;
+DROP TABLE IF EXISTS invoices;

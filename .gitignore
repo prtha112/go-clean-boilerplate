@@ -1,2 +1,2 @@
 # Ignore local Postgres data
-pgdata/
+postgres_data/

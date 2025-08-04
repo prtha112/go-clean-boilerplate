@@ -1,43 +1,434 @@
-## Login get jwt token
+### Go Clean Architecture API Tests
+### Make sure to start the server first: go run cmd/api/main.go
+### And ensure Docker containers are running: docker-compose up -d
+
+@baseUrl = http://localhost:8080
+
+### Health Check
+GET {{baseUrl}}/health
+
+###
+
+### 1. Authentication - Register User
+POST {{baseUrl}}/api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "testuser",
+  "email": "test@example.com",
+  "password": "password123"
+}
+
+###
+
+### 2. Authentication - Login User
 # @name login
-POST http://localhost:8085/login
+POST {{baseUrl}}/api/v1/auth/login
 Content-Type: application/json
 
 {
-  "username": "user1",
-  "password": "password1"
+  "username": "testuser",
+  "password": "password123"
 }
 
-### 📦 Get All Orders using token from login
-GET http://localhost:8085/orders
-Authorization: Bearer {{login.response.body.token}}
-Content-Type: application/json
+###
 
-### 📦 Get Order by ID using token from login
-GET http://localhost:8085/orders/1
-Authorization: Bearer {{login.response.body.token}}
-Content-Type: application/json
+### 3. Authentication - Get Profile (Protected)
+GET {{baseUrl}}/api/v1/auth/profile
+Authorization: Bearer {{login.response.body.data.token}}
 
-### 📦 Create a new order using token from login
-POST http://localhost:8085/orders
-Authorization: Bearer {{login.response.body.token}}
+###
+
+### 4. Products - Create Product (Protected)
+POST {{baseUrl}}/api/v1/products
 Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
 
 {
-    "item": "Banana",
-    "amount": 30
+  "name": "iPhone 15 Pro",
+  "description": "Latest iPhone with advanced features",
+  "price": 999.99,
+  "stock": 50
 }
 
-### 📦 Get Order by ID using token from login
-DELETE http://localhost:8085/orders/4
-Authorization: Bearer {{login.response.body.token}}
+> {%
+  client.test("Product created", function() {
+    client.assert(response.status === 201, "Response status is not 201");
+    client.global.set("productId", response.body.data.id);
+  });
+%}
 
-### 📦 Create a new invoice using token from login
-POST http://localhost:8085/invoices
-Authorization: Bearer {{login.response.body.token}}
+###
+
+### 5. Products - Create Another Product
+POST {{baseUrl}}/api/v1/products
 Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
 
 {
-    "order_id": "order-123",
-    "amount": 999.99
+  "name": "MacBook Pro M3",
+  "description": "Powerful laptop for professionals",
+  "price": 1999.99,
+  "stock": 25
 }
+
+> {%
+  client.test("Second product created", function() {
+    client.assert(response.status === 201, "Response status is not 201");
+    client.global.set("productId2", response.body.data.id);
+  });
+%}
+
+###
+
+### 6. Products - Get All Products (Protected)
+GET {{baseUrl}}/api/v1/products?limit=10&offset=0
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 7. Products - Get Product by ID (Protected)
+GET {{baseUrl}}/api/v1/products/{{productId}}
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 8. Products - Update Product (Protected)
+PUT {{baseUrl}}/api/v1/products/{{productId}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "name": "iPhone 15 Pro Max",
+  "description": "Latest iPhone with advanced features and larger screen",
+  "price": 1099.99,
+  "stock": 45
+}
+
+###
+
+### 9. Orders - Create Order (Protected)
+POST {{baseUrl}}/api/v1/orders
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "customer_name": "John Doe",
+  "customer_email": "john@example.com",
+  "customer_phone": "+1234567890",
+  "shipping_address": "123 Main St, City, State 12345",
+  "items": [
+    {
+      "product_id": "{{productId}}",
+      "quantity": 2,
+      "unit_price": 1099.99
+    },
+    {
+      "product_id": "{{productId2}}",
+      "quantity": 1,
+      "unit_price": 1999.99
+    }
+  ]
+}
+
+> {%
+  client.test("Order created", function() {
+    client.assert(response.status === 201, "Response status is not 201");
+    client.global.set("orderId", response.body.data.id);
+  });
+%}
+
+###
+
+### 10. Orders - Get All Orders (Protected)
+GET {{baseUrl}}/api/v1/orders?limit=10&offset=0
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 11. Orders - Get Order by ID (Protected)
+GET {{baseUrl}}/api/v1/orders/{{orderId}}
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 12. Orders - Update Order Status (Protected)
+PATCH {{baseUrl}}/api/v1/orders/{{orderId}}/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "status": "confirmed"
+}
+
+###
+
+### 13. Invoices - Create Manual Invoice (Protected)
+POST {{baseUrl}}/api/v1/invoices
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "customer_name": "Jane Smith",
+  "customer_email": "jane@example.com",
+  "customer_phone": "+1987654321",
+  "billing_address": "456 Oak Ave, City, State 54321",
+  "due_date": "2024-09-01T00:00:00Z",
+  "issued_date": "2024-08-01T00:00:00Z",
+  "notes": "Manual invoice for consulting services",
+  "items": [
+    {
+      "description": "Web Development Consultation",
+      "quantity": 10,
+      "unit_price": 150.00
+    },
+    {
+      "description": "System Architecture Review",
+      "quantity": 5,
+      "unit_price": 200.00
+    }
+  ]
+}
+
+> {%
+  client.test("Manual invoice created", function() {
+    client.assert(response.status === 201, "Response status is not 201");
+    client.global.set("invoiceId", response.body.data.id);
+  });
+%}
+
+###
+
+### 14. Invoices - Create Invoice from Order (Protected)
+POST {{baseUrl}}/api/v1/invoices/from-order/{{orderId}}
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "due_date": "2024-09-15T00:00:00Z",
+  "notes": "Invoice generated from order"
+}
+
+> {%
+  client.test("Invoice from order created", function() {
+    client.assert(response.status === 201, "Response status is not 201");
+    client.global.set("orderInvoiceId", response.body.data.id);
+  });
+%}
+
+###
+
+### 15. Invoices - Get All Invoices (Protected)
+GET {{baseUrl}}/api/v1/invoices?limit=10&offset=0
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 16. Invoices - Get Invoice by ID (Protected)
+GET {{baseUrl}}/api/v1/invoices/{{invoiceId}}
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 17. Invoices - Get Invoice by Number (Protected)
+GET {{baseUrl}}/api/v1/invoices/number/INV202408001
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 18. Invoices - Get Overdue Invoices (Protected)
+GET {{baseUrl}}/api/v1/invoices/overdue?limit=10&offset=0
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 19. Invoices - Update Invoice Status (Protected)
+PATCH {{baseUrl}}/api/v1/invoices/{{invoiceId}}/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "status": "paid",
+  "paid_date": "2024-08-04T10:00:00Z"
+}
+
+###
+
+### 20. Products - Delete Product (Protected)
+DELETE {{baseUrl}}/api/v1/products/{{productId2}}
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 21. Orders - Delete Order (Protected)
+DELETE {{baseUrl}}/api/v1/orders/{{orderId}}
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### 22. Invoices - Delete Invoice (Protected)
+DELETE {{baseUrl}}/api/v1/invoices/{{invoiceId}}
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### Error Cases - Test without authentication
+GET {{baseUrl}}/api/v1/products
+
+###
+
+### Error Cases - Test with invalid token
+GET {{baseUrl}}/api/v1/products
+Authorization: Bearer invalid_token_here
+
+###
+
+### Error Cases - Test creating product with invalid data
+POST {{baseUrl}}/api/v1/products
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "name": "",
+  "price": -100
+}
+
+###
+
+### Error Cases - Test getting non-existent product
+GET {{baseUrl}}/api/v1/products/00000000-0000-0000-0000-000000000000
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### Performance Test - Create multiple products
+POST {{baseUrl}}/api/v1/products
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "name": "Test Product 1",
+  "description": "Performance test product",
+  "price": 99.99,
+  "stock": 100
+}
+
+###
+
+POST {{baseUrl}}/api/v1/products
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "name": "Test Product 2",
+  "description": "Performance test product",
+  "price": 149.99,
+  "stock": 75
+}
+
+###
+
+POST {{baseUrl}}/api/v1/products
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "name": "Test Product 3",
+  "description": "Performance test product",
+  "price": 199.99,
+  "stock": 50
+}
+
+###
+
+### Pagination Test - Get products with different limits
+GET {{baseUrl}}/api/v1/products?limit=2&offset=0
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+GET {{baseUrl}}/api/v1/products?limit=2&offset=2
+Authorization: Bearer {{login.response.body.data.token}}
+
+###
+
+### Complex Order Test - Order with multiple items
+POST {{baseUrl}}/api/v1/orders
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "customer_name": "Alice Johnson",
+  "customer_email": "alice@example.com",
+  "customer_phone": "+1555123456",
+  "shipping_address": "789 Pine St, City, State 67890",
+  "items": [
+    {
+      "product_id": "{{productId}}",
+      "quantity": 3,
+      "unit_price": 1099.99
+    }
+  ]
+}
+
+> {%
+  client.test("Complex order created", function() {
+    client.assert(response.status === 201, "Response status is not 201");
+    client.global.set("complexOrderId", response.body.data.id);
+  });
+%}
+
+###
+
+### Test Order Status Updates
+PATCH {{baseUrl}}/api/v1/orders/{{complexOrderId}}/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "status": "processing"
+}
+
+###
+
+PATCH {{baseUrl}}/api/v1/orders/{{complexOrderId}}/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "status": "shipped"
+}
+
+###
+
+PATCH {{baseUrl}}/api/v1/orders/{{complexOrderId}}/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "status": "delivered"
+}
+
+###
+
+### Test Invoice Status Updates
+PATCH {{baseUrl}}/api/v1/invoices/{{orderInvoiceId}}/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "status": "sent"
+}
+
+###
+
+PATCH {{baseUrl}}/api/v1/invoices/{{orderInvoiceId}}/status
+Content-Type: application/json
+Authorization: Bearer {{login.response.body.data.token}}
+
+{
+  "status": "paid",
+  "paid_date": "2024-08-04T15:30:00Z"
+}
+
+###

@@ -1,17 +1,35 @@
-# syntax=docker/dockerfile:1
-FROM golang:1.24-alpine AS builder
+# Build stage
+FROM golang:1.21-alpine AS builder
+
 WORKDIR /app
+
+# Copy go mod and sum files
 COPY go.mod go.sum ./
+
+# Download dependencies
 RUN go mod download
+
+# Copy source code
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o app ./cmd/main.go
 
-FROM alpine:3.19
-WORKDIR /app
-COPY --from=builder /app/app ./app
-EXPOSE 8085
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api
 
-# Default to restapi if not specified
-ARG APP_MODE=restapi
-ENV APP_MODE=${APP_MODE}
-ENTRYPOINT ["/bin/sh", "-c", "./app $APP_MODE"]
+# Final stage
+FROM alpine:latest
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy the binary from builder stage
+COPY --from=builder /app/main .
+
+# Copy migration files
+COPY --from=builder /app/migrations ./migrations
+
+# Expose port
+EXPOSE 8080
+
+# Run the binary
+CMD ["./main"]

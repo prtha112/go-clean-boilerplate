@@ -16,6 +16,15 @@ const (
 	InvoiceStatusCancelled InvoiceStatus = "cancelled"
 )
 
+type InvoiceKafka struct {
+	ID     int64   `json:"id"`
+	Amount float64 `json:"amount"`
+}
+
+type InvoiceKafkaRepository interface {
+	Save(*InvoiceKafka) error
+}
+
 type InvoiceItem struct {
 	ID          uuid.UUID `json:"id" db:"id"`
 	InvoiceID   uuid.UUID `json:"invoice_id" db:"invoice_id"`

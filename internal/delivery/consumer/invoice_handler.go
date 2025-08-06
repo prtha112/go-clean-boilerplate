@@ -38,7 +38,7 @@ func (c *InvoiceConsumer) Start(ctx context.Context) {
 		if err := c.usecase.HandleInvoice(&inv); err != nil {
 			log.Println("Usecase error:", err)
 		} else {
-			log.Printf("Invoice %s processed", inv.ID)
+			log.Printf("Invoice %d processed", inv.ID)
 		}
 	}
 }

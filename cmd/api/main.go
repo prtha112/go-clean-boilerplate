@@ -3,12 +3,12 @@ package main
 import (
 	"log"
 
-	"go-clean-v2/config"
-	httpDelivery "go-clean-v2/internal/delivery/http"
-	"go-clean-v2/internal/repository"
-	"go-clean-v2/internal/usecase"
-	"go-clean-v2/pkg/database"
-	"go-clean-v2/pkg/kafka"
+	"go-clean-boilerplate/config"
+	httpDelivery "go-clean-boilerplate/internal/delivery/http"
+	"go-clean-boilerplate/internal/repository"
+	"go-clean-boilerplate/internal/usecase"
+	"go-clean-boilerplate/pkg/database"
+	"go-clean-boilerplate/pkg/kafka"
 )
 
 func main() {

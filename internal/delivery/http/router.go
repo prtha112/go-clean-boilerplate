@@ -1,8 +1,8 @@
 package http
 
 import (
-	"go-clean-v2/internal/domain"
-	"go-clean-v2/pkg/middleware"
+	"go-clean-boilerplate/internal/domain"
+	"go-clean-boilerplate/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
 )

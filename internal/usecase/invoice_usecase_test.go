@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"go-clean-v2/internal/domain"
+	"go-clean-boilerplate/internal/domain"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"

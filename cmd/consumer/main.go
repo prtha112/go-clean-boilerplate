@@ -6,12 +6,12 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"go-clean-v2/config"
-	internalKafka "go-clean-v2/internal/delivery/consumer"
-	"go-clean-v2/internal/repository"
-	"go-clean-v2/internal/usecase"
-	"go-clean-v2/pkg/database"
-	pkgKafka "go-clean-v2/pkg/kafka"
+	"go-clean-boilerplate/config"
+	internalKafka "go-clean-boilerplate/internal/delivery/consumer"
+	"go-clean-boilerplate/internal/repository"
+	"go-clean-boilerplate/internal/usecase"
+	"go-clean-boilerplate/pkg/database"
+	pkgKafka "go-clean-boilerplate/pkg/kafka"
 )
 
 func main() {

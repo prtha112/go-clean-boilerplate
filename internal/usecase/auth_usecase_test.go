@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"go-clean-v2/internal/domain"
+	"go-clean-boilerplate/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"

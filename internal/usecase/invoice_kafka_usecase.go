@@ -1,6 +1,6 @@
 package usecase
 
-import "go-clean-v2/internal/domain"
+import "go-clean-boilerplate/internal/domain"
 
 type InvoiceKafkaUsecase struct {
 	repo domain.InvoiceKafkaRepository

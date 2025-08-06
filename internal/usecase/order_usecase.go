@@ -3,7 +3,7 @@ package usecase
 import (
 	"fmt"
 
-	"go-clean-v2/internal/domain"
+	"go-clean-boilerplate/internal/domain"
 
 	"github.com/google/uuid"
 )

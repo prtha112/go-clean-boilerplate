@@ -1,13 +1,13 @@
-package kafka
+package consumer
 
 import (
 	"context"
 	"encoding/json"
 	"log"
 
-	"go-clean-v2/internal/domain"
-	"go-clean-v2/internal/usecase"
-	"go-clean-v2/pkg/kafka"
+	"go-clean-boilerplate/internal/domain"
+	"go-clean-boilerplate/internal/usecase"
+	"go-clean-boilerplate/pkg/kafka"
 )
 
 type InvoiceConsumer struct {

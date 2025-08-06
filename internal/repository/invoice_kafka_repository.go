@@ -2,7 +2,7 @@ package repository
 
 import (
 	"database/sql"
-	"go-clean-v2/internal/domain"
+	"go-clean-boilerplate/internal/domain"
 	"log"
 )
 

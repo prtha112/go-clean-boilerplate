@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"go-clean-v2/internal/domain"
+	"go-clean-boilerplate/internal/domain"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"

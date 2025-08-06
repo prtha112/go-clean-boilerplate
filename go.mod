@@ -1,4 +1,4 @@
-module go-clean-v2
+module go-clean-boilerplate
 
 go 1.21
 

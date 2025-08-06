@@ -7,7 +7,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"go-clean-v2/config"
-	internalKafka "go-clean-v2/internal/delivery/kafka"
+	internalKafka "go-clean-v2/internal/delivery/consumer"
 	"go-clean-v2/internal/repository"
 	"go-clean-v2/internal/usecase"
 	"go-clean-v2/pkg/database"

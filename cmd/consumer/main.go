@@ -3,15 +3,15 @@ package main
 import (
 	"context"
 	"log"
-	"os"
 
 	_ "github.com/lib/pq"
 
 	"go-clean-v2/config"
-	"go-clean-v2/internal/delivery/kafka"
+	internalKafka "go-clean-v2/internal/delivery/kafka"
 	"go-clean-v2/internal/repository"
 	"go-clean-v2/internal/usecase"
 	"go-clean-v2/pkg/database"
+	pkgKafka "go-clean-v2/pkg/kafka"
 )
 
 func main() {
@@ -32,21 +32,37 @@ func main() {
 		SSLMode:  cfg.Database.SSLMode,
 	}
 
+	// Create a new PostgreSQL connection using pkg/database
 	db, err := database.NewPostgresConnection(dbConfig)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
 	defer database.CloseConnection(db)
+	// Create Kafka consumer using pkg/kafka
+	kafka := pkgKafka.NewKafkaConsumer(&pkgKafka.ConfigConsumer{
+		Brokers:                cfg.Kafka.Brokers,
+		Topic:                  cfg.Kafka.Topic,
+		GroupID:                cfg.Kafka.GroupID,
+		ReadTimeout:            cfg.Kafka.ReadTimeout,
+		MinBytes:               cfg.Kafka.MinBytes,
+		MaxBytes:               cfg.Kafka.MaxBytes,
+		MaxWait:                cfg.Kafka.MaxWait,
+		CommitInterval:         cfg.Kafka.CommitInterval,
+		QueueCapacity:          cfg.Kafka.QueueCapacity,
+		ReadLagInterval:        cfg.Kafka.ReadLagInterval,
+		WatchPartitionChanges:  cfg.Kafka.WatchPartitionChanges,
+		PartitionWatchInterval: cfg.Kafka.PartitionWatchInterval,
+	})
+	defer kafka.Close()
 
+	// Initialize repositories
 	repo := repository.NewInvoicePostgres(db)
+	// Initialize use case for Kafka consumer
 	uc := usecase.NewInvoiceKafkaUsecase(repo)
 
-	consumer := kafka.NewInvoiceConsumer(
-		[]string{os.Getenv("KAFKA_BROKER")},
-		"invoice-topic",
-		"invoice-group",
-		uc,
-	)
-
+	// Initialize Kafka consumer
+	consumer := internalKafka.NewInvoiceConsumer(kafka, uc)
+	defer consumer.Close()
+	// Start consuming messages
 	consumer.Start(ctx)
 }

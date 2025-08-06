@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -33,8 +34,18 @@ type JWTConfig struct {
 }
 
 type KafkaConfig struct {
-	Brokers []string
-	Topic   string
+	Brokers                []string
+	Topic                  string
+	GroupID                string
+	ReadTimeout            time.Duration
+	MinBytes               int
+	MaxBytes               int
+	MaxWait                time.Duration
+	CommitInterval         time.Duration
+	QueueCapacity          int
+	ReadLagInterval        time.Duration
+	WatchPartitionChanges  bool
+	PartitionWatchInterval time.Duration
 }
 
 func Load() (*Config, error) {
@@ -58,8 +69,18 @@ func Load() (*Config, error) {
 			Secret: getEnv("JWT_SECRET", "your-secret-key-change-this-in-production"),
 		},
 		Kafka: KafkaConfig{
-			Brokers: []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
-			Topic:   getEnv("KAFKA_TOPIC", "invoices"),
+			Brokers:                []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
+			Topic:                  getEnv("KAFKA_TOPIC", "invoices"),
+			GroupID:                getEnv("KAFKA_GROUP_ID", "invoice-group"),
+			ReadTimeout:            time.Duration(getEnvAsInt("KAFKA_READ_TIMEOUT", 0)) * time.Second,
+			MinBytes:               getEnvAsInt("KAFKA_MIN_BYTES", 1),                                             // Default to 1 byte
+			MaxBytes:               getEnvAsInt("KAFKA_MAX_BYTES", 1024*1024),                                     // Default to 1MB
+			MaxWait:                time.Duration(getEnvAsInt("KAFKA_MAX_WAIT", 1)) * time.Millisecond,            // Default to 1ms
+			CommitInterval:         time.Duration(getEnvAsInt("KAFKA_COMMIT_INTERVAL", 100)) * time.Millisecond,   // Default to 100ms
+			QueueCapacity:          getEnvAsInt("KAFKA_QUEUE_CAPACITY", 1000),                                     // Default to 1000 messages
+			ReadLagInterval:        time.Duration(getEnvAsInt("KAFKA_READ_LAG_INTERVAL", 0)) * time.Second,        // Default to 0 (disabled)
+			WatchPartitionChanges:  getEnvAsBool("KAFKA_WATCH_PARTITION_CHANGES", false),                          // Default to false
+			PartitionWatchInterval: time.Duration(getEnvAsInt("KAFKA_PARTITION_WATCH_INTERVAL", 0)) * time.Second, // Default to 0 (disabled)
 		},
 	}
 
@@ -77,6 +98,15 @@ func getEnvAsInt(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if intValue, err := strconv.Atoi(value); err == nil {
 			return intValue
+		}
+	}
+	return defaultValue
+}
+
+func getEnvAsBool(key string, defaultValue bool) bool {
+	if value := os.Getenv(key); value != "" {
+		if boolValue, err := strconv.ParseBool(value); err == nil {
+			return boolValue
 		}
 	}
 	return defaultValue

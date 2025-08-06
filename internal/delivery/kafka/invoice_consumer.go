@@ -7,31 +7,23 @@ import (
 
 	"go-clean-v2/internal/domain"
 	"go-clean-v2/internal/usecase"
-
-	"github.com/segmentio/kafka-go"
+	"go-clean-v2/pkg/kafka"
 )
 
 type InvoiceConsumer struct {
-	reader  *kafka.Reader
-	usecase *usecase.InvoiceKafkaUsecase
+	consumer kafka.KafkaConsumer
+	usecase  *usecase.InvoiceKafkaUsecase
 }
 
-func NewInvoiceConsumer(brokers []string, topic, groupID string, uc *usecase.InvoiceKafkaUsecase) *InvoiceConsumer {
-	r := kafka.NewReader(kafka.ReaderConfig{
-		Brokers: brokers,
-		Topic:   topic,
-		GroupID: groupID,
-	})
-
-	return &InvoiceConsumer{reader: r, usecase: uc}
+func NewInvoiceConsumer(consumer kafka.KafkaConsumer, uc *usecase.InvoiceKafkaUsecase) *InvoiceConsumer {
+	return &InvoiceConsumer{consumer: consumer, usecase: uc}
 }
 
 func (c *InvoiceConsumer) Start(ctx context.Context) {
-	defer c.reader.Close()
-	log.Println("Kafka consumer started")
+	log.Println("Kafka consumer starting...")
 
 	for {
-		msg, err := c.reader.ReadMessage(ctx)
+		msg, err := c.consumer.ReadMessage()
 		if err != nil {
 			log.Println("Kafka read error:", err)
 			continue
@@ -49,4 +41,10 @@ func (c *InvoiceConsumer) Start(ctx context.Context) {
 			log.Printf("Invoice %s processed", inv.ID)
 		}
 	}
+}
+
+// Close closes the consumer
+func (c *InvoiceConsumer) Close() error {
+	log.Println("Closing Kafka consumer")
+	return c.consumer.Close()
 }

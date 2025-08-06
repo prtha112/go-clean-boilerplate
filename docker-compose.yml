@@ -51,5 +51,48 @@ services:
       KAFKA_AUTHORIZER_CLASS_NAME: kafka.security.authorizer.AclAuthorizer
       KAFKA_ALLOW_EVERYONE_IF_NO_ACL_FOUND: "true"
 
+  go-clean-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: api
+    container_name: go_clean_api
+    ports:
+      - "8085:8085"
+    environment:
+      - SERVER_PORT=8085
+      - SERVER_HOST=0.0.0.0
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - KAFKA_BROKERS=kafka1:19092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka1:
+        condition: service_started
+    volumes:
+      - .:/app
+
+  go-clean-consumer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: consumer
+    container_name: go_clean_consumer
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - KAFKA_BROKERS=kafka1:19092
+      - KAFKA_GROUP_ID=invoice-group
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka1:
+        condition: service_started
+    volumes:
+      - .:/app
+
 volumes:
   postgres_data:

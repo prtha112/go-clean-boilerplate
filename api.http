@@ -1,5 +1,5 @@
 ### Go Clean Architecture API Tests
-### Make sure to start the server first: go run cmd/api/main.go
+### Make sure to start the server first: go run cmd/main.go -service=api
 ### And ensure Docker containers are running: docker-compose up -d
 
 @baseUrl = http://localhost:8080

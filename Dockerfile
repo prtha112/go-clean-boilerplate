@@ -13,7 +13,15 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api
+# Default to building the API service
+ARG SERVICE=api
+RUN if [ "$SERVICE" = "consumer" ]; then \
+        CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd && \
+        echo "consumer" > /app/service_type; \
+    else \
+        CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd && \
+        echo "api" > /app/service_type; \
+    fi
 
 # Final stage
 FROM alpine:latest
@@ -31,5 +39,5 @@ COPY --from=builder /app/migrations ./migrations
 # Expose port
 EXPOSE 8080
 
-# Run the binary
-CMD ["./main"]
+# Run the binary with the appropriate service flag
+CMD ["sh", "-c", "if [ -f /app/service_type ]; then SERVICE=$(cat /app/service_type); ./main -service=$SERVICE; else ./main -service=api; fi"]

@@ -30,12 +30,22 @@ A REST API built with Go using Clean Architecture principles, featuring JWT auth
 
 2. **Start the infrastructure:**
    ```bash
+   # Start all services including the application
    docker-compose up -d
+   
+   # Or start individual services
+   docker-compose up -d postgres kafka1  # Start dependencies
+   docker-compose up -d go-clean-api     # Start API service
+   docker-compose up -d go-clean-consumer # Start consumer service
    ```
 
 3. **Run the application:**
    ```bash
-   go run cmd/api/main.go
+   # Run the API server
+   go run cmd/main.go -service=api
+   
+   # Run the Kafka consumer
+   go run cmd/main.go -service=consumer
    ```
 
 4. **Test the API:**
@@ -57,7 +67,7 @@ The `api.http` file contains comprehensive API tests that you can run directly i
 
 ### Running Tests
 
-1. Make sure the server is running: `go run cmd/api/main.go`
+1. Make sure the server is running: `go run cmd/main.go -service=api`
 2. Open `api.http` in VS Code
 3. Click "Send Request" on each test, starting from the top
 4. The tests use variables that are automatically populated from responses
@@ -97,8 +107,7 @@ The `api.http` file contains comprehensive API tests that you can run directly i
 
 ```
 ├── cmd/
-│   ├── api/                 # API application entry point
-│   └── consumer/            # Kafka consumer application entry point
+│   └── main.go              # Application entry point for both API and consumer
 ├── config/                  # Configuration management
 ├── internal/
 │   ├── domain/             # Domain entities and interfaces
@@ -132,7 +141,7 @@ DB_SSLMODE=disable
 
 # App
 SERVER_PORT=8085
-SERVER_HOST=localhost
+SERVER_HOST=0.0.0.0
 JWT_SECRET=mockjwtsecret
 
 # Kafka
@@ -176,7 +185,7 @@ Events are published to the `invoice-topic` topic with detailed invoice informat
 The application also includes a Kafka consumer that processes invoice events:
 
 ```bash
-go run cmd/consumer/main.go
+go run cmd/main.go -service=consumer
 ```
 
 The consumer listens for invoice events and logs them to the console.

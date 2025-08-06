@@ -15,12 +15,12 @@ type kafkaProducer struct {
 	writer *kafka.Writer
 }
 
-type Config struct {
+type ConfigProducer struct {
 	Brokers []string
 	Topic   string
 }
 
-func NewKafkaProducer(config *Config) domain.KafkaProducer {
+func NewKafkaProducer(config *ConfigProducer) domain.KafkaProducer {
 	writer := &kafka.Writer{
 		Addr:         kafka.TCP(config.Brokers...),
 		Topic:        config.Topic,
@@ -67,7 +67,7 @@ func (p *kafkaProducer) Close() error {
 
 // Helper function to create a simple Kafka producer for testing
 func NewSimpleProducer(brokers []string) domain.KafkaProducer {
-	config := &Config{
+	config := &ConfigProducer{
 		Brokers: brokers,
 		Topic:   "invoices", // default topic
 	}

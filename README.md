@@ -10,6 +10,7 @@ A REST API built with Go using Clean Architecture principles, featuring JWT auth
 - **Kafka Integration**: Event streaming for invoice operations
 - **Docker Support**: Containerized application with docker-compose
 - **RESTful API**: Complete CRUD operations for Products, Orders, Users, and Invoices
+- **Comprehensive Testing**: API tests with VS Code REST Client
 
 ## Quick Start
 
@@ -24,7 +25,7 @@ A REST API built with Go using Clean Architecture principles, featuring JWT auth
 1. **Clone and setup the project:**
    ```bash
    git clone <repository-url>
-   cd go-clean-v2
+   cd go-clean-boilerplate
    ```
 
 2. **Start the infrastructure:**
@@ -95,16 +96,20 @@ The `api.http` file contains comprehensive API tests that you can run directly i
 ## Architecture
 
 ```
-├── cmd/api/                 # Application entry point
+├── cmd/
+│   ├── api/                 # API application entry point
+│   └── consumer/            # Kafka consumer application entry point
 ├── config/                  # Configuration management
 ├── internal/
 │   ├── domain/             # Domain entities and interfaces
 │   ├── usecase/            # Business logic layer
 │   ├── repository/         # Data access layer
-│   └── delivery/http/      # HTTP handlers and routing
+│   ├── delivery/
+│   │   ├── http/           # HTTP handlers and routing
+│   │   └── consumer/       # Kafka consumer handlers
 ├── pkg/
 │   ├── database/           # Database connection utilities
-│   ├── kafka/              # Kafka producer utilities
+│   ├── kafka/              # Kafka producer/consumer utilities
 │   └── middleware/         # HTTP middleware
 ├── migrations/             # Database migrations
 ├── docker-compose.yml      # Docker services configuration
@@ -117,24 +122,35 @@ The `api.http` file contains comprehensive API tests that you can run directly i
 Create a `.env` file with the following variables:
 
 ```env
-# Server Configuration
-SERVER_HOST=localhost
-SERVER_PORT=8080
-
-# Database Configuration
+# Database
 DB_HOST=localhost
-DB_PORT=5432
+DB_PORT=7775
 DB_USER=postgres
-DB_PASSWORD=postgres
+DB_PASSWORD=password
 DB_NAME=go_clean_db
 DB_SSLMODE=disable
 
-# JWT Configuration
-JWT_SECRET=your-super-secret-jwt-key-here
+# App
+SERVER_PORT=8085
+SERVER_HOST=localhost
+JWT_SECRET=mockjwtsecret
 
-# Kafka Configuration
+# Kafka
 KAFKA_BROKERS=localhost:9092
-KAFKA_TOPIC=invoice-events
+KAFKA_TOPIC=invoice-topic
+KAFKA_GROUP_ID=invoice-group
+KAFKA_READ_TIMEOUT=0
+KAFKA_MIN_BYTES=1
+KAFKA_MAX_BYTES=1048576
+KAFKA_MAX_WAIT=1
+KAFKA_COMMIT_INTERVAL=100
+KAFKA_QUEUE_CAPACITY=1000
+KAFKA_READ_LAG_INTERVAL=0
+KAFKA_WATCH_PARTITION_CHANGES=false
+KAFKA_PARTITION_WATCH_INTERVAL=0
+# Uncomment if using SASL/PLAIN authentication (e.g. Confluent Cloud)
+# KAFKA_USERNAME=your_kafka_username
+# KAFKA_PASSWORD=your_kafka_password
 ```
 
 ## Database Migrations
@@ -153,13 +169,23 @@ The application publishes invoice events to Kafka when:
 - Updating invoice status
 - Creating invoices from orders
 
-Events are published to the `invoice-events` topic with detailed invoice information.
+Events are published to the `invoice-topic` topic with detailed invoice information.
 
-## Testing Examples
+### Kafka Consumer
+
+The application also includes a Kafka consumer that processes invoice events:
+
+```bash
+go run cmd/consumer/main.go
+```
+
+The consumer listens for invoice events and logs them to the console.
+
+## Usage Examples
 
 ### 1. Register and Login
 ```http
-POST http://localhost:8080/api/v1/auth/register
+POST http://localhost:8085/api/v1/auth/register
 Content-Type: application/json
 
 {
@@ -171,7 +197,7 @@ Content-Type: application/json
 
 ### 2. Create Product
 ```http
-POST http://localhost:8080/api/v1/products
+POST http://localhost:8085/api/v1/products
 Content-Type: application/json
 Authorization: Bearer YOUR_JWT_TOKEN
 
@@ -185,7 +211,7 @@ Authorization: Bearer YOUR_JWT_TOKEN
 
 ### 3. Create Order
 ```http
-POST http://localhost:8080/api/v1/orders
+POST http://localhost:8085/api/v1/orders
 Content-Type: application/json
 Authorization: Bearer YOUR_JWT_TOKEN
 
@@ -195,12 +221,24 @@ Authorization: Bearer YOUR_JWT_TOKEN
   "customer_phone": "+1234567890",
   "shipping_address": "123 Main St",
   "items": [
-    {
-      "product_id": "PRODUCT_UUID",
-      "quantity": 2,
-      "unit_price": 999.99
-    }
-  ]
+  {
+    "product_id": "PRODUCT_UUID",
+    "quantity": 2,
+    "unit_price": 999.99
+  }
+]
+}
+```
+
+### 4. Create Invoice from Order
+```http
+POST http://localhost:8085/api/v1/invoices/from-order/ORDER_UUID
+Content-Type: application/json
+Authorization: Bearer YOUR_JWT_TOKEN
+
+{
+  "due_date": "2024-09-01T00:00:00Z",
+  "notes": "Invoice for order"
 }
 ```
 
@@ -230,7 +268,7 @@ The project follows Clean Architecture principles:
 1. **Database Connection Error**: Ensure PostgreSQL is running via docker-compose
 2. **Kafka Connection Error**: Ensure Kafka and Zookeeper are running
 3. **JWT Token Invalid**: Make sure to use the token from login response
-4. **Port Already in Use**: Check if port 8080 is available
+4. **Port Already in Use**: Check if port 8085 is available
 
 ### Logs
 

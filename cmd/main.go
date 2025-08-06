@@ -54,20 +54,17 @@ func main() {
 
 	switch *service {
 	case "api":
-		runAPI(cfg, db)
+		kafkaProducer := initKafkaProducer(cfg)
+		defer kafkaProducer.Close()
+		runAPI(cfg, db, kafkaProducer)
 	case "consumer":
-		runConsumer(cfg, db)
+		kafkaConsumer := initKafkaConsumer(cfg)
+		defer kafkaConsumer.Close()
+		runConsumer(cfg, db, kafkaConsumer)
 	}
 }
 
-func runAPI(cfg *config.Config, db *sql.DB) {
-	// Initialize Kafka producer
-	kafkaProducer := kafka.NewKafkaProducer(&kafka.ConfigProducer{
-		Brokers: cfg.Kafka.Brokers,
-		Topic:   cfg.Kafka.Topic,
-	})
-	defer kafkaProducer.Close()
-
+func runAPI(cfg *config.Config, db *sql.DB, kafkaProducer kafka.KafkaProducer) {
 	// Initialize repositories
 	productRepo := repository.NewProductRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
@@ -93,10 +90,33 @@ func runAPI(cfg *config.Config, db *sql.DB) {
 	}
 }
 
-func runConsumer(cfg *config.Config, db *sql.DB) {
+func runConsumer(cfg *config.Config, db *sql.DB, kafka kafka.KafkaConsumer) {
 	ctx := context.Background()
 
-	// Create Kafka consumer using pkg/kafka
+	// Initialize repositories and use cases
+	repo := repository.NewInvoicePostgres(db)
+	uc := usecase.NewInvoiceKafkaUsecase(repo)
+
+	// Initialize Kafka consumer
+	consumer := internalKafka.NewInvoiceConsumer(kafka, uc)
+	defer consumer.Close()
+
+	log.Print("Brokers:", cfg.Kafka.Brokers)
+	log.Println("Topic:", cfg.Kafka.Topic)
+	log.Println("Group ID:", cfg.Kafka.GroupID)
+	// Start consuming messages
+	consumer.Start(ctx)
+}
+
+func initKafkaProducer(cfg *config.Config) kafka.KafkaProducer {
+	kafkaProducer := kafka.NewKafkaProducer(&kafka.ConfigProducer{
+		Brokers: cfg.Kafka.Brokers,
+		Topic:   cfg.Kafka.Topic,
+	})
+	return kafkaProducer
+}
+
+func initKafkaConsumer(cfg *config.Config) kafka.KafkaConsumer {
 	kafkaConsumer := kafka.NewKafkaConsumer(&kafka.ConfigConsumer{
 		Brokers:                cfg.Kafka.Brokers,
 		Topic:                  cfg.Kafka.Topic,
@@ -111,16 +131,5 @@ func runConsumer(cfg *config.Config, db *sql.DB) {
 		WatchPartitionChanges:  cfg.Kafka.WatchPartitionChanges,
 		PartitionWatchInterval: cfg.Kafka.PartitionWatchInterval,
 	})
-	defer kafkaConsumer.Close()
-
-	// Initialize repositories and use cases
-	repo := repository.NewInvoicePostgres(db)
-	uc := usecase.NewInvoiceKafkaUsecase(repo)
-
-	// Initialize Kafka consumer
-	consumer := internalKafka.NewInvoiceConsumer(kafkaConsumer, uc)
-	defer consumer.Close()
-
-	// Start consuming messages
-	consumer.Start(ctx)
+	return kafkaConsumer
 }

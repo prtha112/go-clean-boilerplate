@@ -341,6 +341,56 @@ func TestOrderUsecase_GetByID_Success(t *testing.T) {
 	mockOrderRepo.AssertExpectations(t)
 }
 
+func TestOrderUsecase_Update(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	validID := uuid.New()
+	validOrder := &domain.Order{
+		ID:            validID,
+		CustomerName:  "John",
+		CustomerEmail: "john@example.com",
+	}
+
+	t.Run("invalid order ID", func(t *testing.T) {
+		order := &domain.Order{ID: uuid.Nil, CustomerName: "A", CustomerEmail: "B"}
+		err := usecase.Update(order)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid order ID")
+	})
+
+	t.Run("empty customer name", func(t *testing.T) {
+		order := &domain.Order{ID: validID, CustomerName: "", CustomerEmail: "B"}
+		err := usecase.Update(order)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "customer name is required")
+	})
+
+	t.Run("empty customer email", func(t *testing.T) {
+		order := &domain.Order{ID: validID, CustomerName: "A", CustomerEmail: ""}
+		err := usecase.Update(order)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "customer email is required")
+	})
+
+	t.Run("order not found", func(t *testing.T) {
+		mockOrderRepo.On("GetByID", validID).Return(nil, errors.New("not found")).Once()
+		err := usecase.Update(validOrder)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "not found")
+		mockOrderRepo.AssertExpectations(t)
+	})
+
+	t.Run("success", func(t *testing.T) {
+		mockOrderRepo.On("GetByID", validID).Return(validOrder, nil).Once()
+		mockOrderRepo.On("Update", validOrder).Return(nil).Once()
+		err := usecase.Update(validOrder)
+		assert.NoError(t, err)
+		mockOrderRepo.AssertExpectations(t)
+	})
+}
+
 func TestOrderUsecase_GetByID_InvalidID(t *testing.T) {
 	mockOrderRepo := new(mockOrderRepository)
 	mockProductRepo := new(mockProductRepository)

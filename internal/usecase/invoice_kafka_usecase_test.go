@@ -10,54 +10,34 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// Mock InvoiceKafkaRepository
-type mockInvoiceKafkaRepository struct {
+type MockInvoiceKafkaRepository struct {
 	mock.Mock
 }
 
-func (m *mockInvoiceKafkaRepository) Save(inv *domain.InvoiceKafka) error {
+func (m *MockInvoiceKafkaRepository) Save(inv *domain.InvoiceKafka) error {
 	args := m.Called(inv)
 	return args.Error(0)
 }
 
-func TestNewInvoiceKafkaUsecase(t *testing.T) {
-	mockRepo := new(mockInvoiceKafkaRepository)
-	usecase := NewInvoiceKafkaUsecase(mockRepo)
+func TestInvoiceKafkaUsecase_HandleInvoice(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		mockRepo := new(MockInvoiceKafkaRepository)
+		uc := NewInvoiceKafkaUsecase(mockRepo)
+		invoice := &domain.InvoiceKafka{}
+		mockRepo.On("Save", invoice).Return(nil)
+		err := uc.HandleInvoice(invoice)
+		assert.NoError(t, err)
+		mockRepo.AssertExpectations(t)
+	})
 
-	assert.NotNil(t, usecase)
-}
-
-func TestInvoiceKafkaUsecase_HandleInvoice_Success(t *testing.T) {
-	mockRepo := new(mockInvoiceKafkaRepository)
-	usecase := NewInvoiceKafkaUsecase(mockRepo)
-
-	invoice := &domain.InvoiceKafka{
-		ID:     1,
-		Amount: 100.50,
-	}
-
-	mockRepo.On("Save", invoice).Return(nil)
-
-	err := usecase.HandleInvoice(invoice)
-
-	assert.NoError(t, err)
-	mockRepo.AssertExpectations(t)
-}
-
-func TestInvoiceKafkaUsecase_HandleInvoice_Error(t *testing.T) {
-	mockRepo := new(mockInvoiceKafkaRepository)
-	usecase := NewInvoiceKafkaUsecase(mockRepo)
-
-	invoice := &domain.InvoiceKafka{
-		ID:     2,
-		Amount: 200.75,
-	}
-
-	mockRepo.On("Save", invoice).Return(errors.New("database error"))
-
-	err := usecase.HandleInvoice(invoice)
-
-	assert.Error(t, err)
-	assert.EqualError(t, err, "database error")
-	mockRepo.AssertExpectations(t)
+	t.Run("repo error", func(t *testing.T) {
+		mockRepo := new(MockInvoiceKafkaRepository)
+		uc := NewInvoiceKafkaUsecase(mockRepo)
+		invoice := &domain.InvoiceKafka{}
+		repoErr := errors.New("repo error")
+		mockRepo.On("Save", invoice).Return(repoErr)
+		err := uc.HandleInvoice(invoice)
+		assert.EqualError(t, err, "repo error")
+		mockRepo.AssertExpectations(t)
+	})
 }

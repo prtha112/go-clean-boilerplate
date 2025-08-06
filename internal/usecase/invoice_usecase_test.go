@@ -438,6 +438,65 @@ func TestInvoiceUsecase_UpdateStatus_InvalidStatus(t *testing.T) {
 	mockInvoiceRepo.AssertNotCalled(t, "GetByID")
 }
 
+func TestInvoiceUsecase_UpdateStatus_GetByIDError(t *testing.T) {
+	mockInvoiceRepo := new(mockInvoiceRepository)
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	mockKafka := new(mockKafkaProducer)
+
+	usecase := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafka)
+
+	invoiceID := uuid.New()
+	mockInvoiceRepo.On("GetByID", invoiceID).Return(nil, errors.New("invoice not found"))
+
+	err := usecase.UpdateStatus(invoiceID, domain.InvoiceStatusSent)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invoice not found")
+	mockInvoiceRepo.AssertExpectations(t)
+	mockInvoiceRepo.AssertNotCalled(t, "Update")
+}
+
+func TestInvoiceUsecase_UpdateStatus_UpdateError(t *testing.T) {
+	mockInvoiceRepo := new(mockInvoiceRepository)
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	mockKafka := new(mockKafkaProducer)
+
+	usecase := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafka)
+
+	invoiceID := uuid.New()
+	invoice := &domain.Invoice{
+		ID:     invoiceID,
+		Status: domain.InvoiceStatusDraft,
+	}
+
+	mockInvoiceRepo.On("GetByID", invoiceID).Return(invoice, nil)
+	mockInvoiceRepo.On("Update", mock.AnythingOfType("*domain.Invoice")).Return(errors.New("update failed"))
+
+	err := usecase.UpdateStatus(invoiceID, domain.InvoiceStatusSent)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "update failed")
+	mockInvoiceRepo.AssertExpectations(t)
+}
+
+func TestInvoiceUsecase_UpdateStatus_InvalidID(t *testing.T) {
+	mockInvoiceRepo := new(mockInvoiceRepository)
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	mockKafka := new(mockKafkaProducer)
+
+	usecase := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafka)
+
+	err := usecase.UpdateStatus(uuid.Nil, domain.InvoiceStatusSent)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid invoice ID")
+	mockInvoiceRepo.AssertNotCalled(t, "GetByID")
+	mockInvoiceRepo.AssertNotCalled(t, "Update")
+}
+
 func TestInvoiceUsecase_Delete_Success(t *testing.T) {
 	mockInvoiceRepo := new(mockInvoiceRepository)
 	mockOrderRepo := new(mockOrderRepository)
@@ -458,6 +517,75 @@ func TestInvoiceUsecase_Delete_Success(t *testing.T) {
 
 	err := usecase.Delete(invoiceID)
 
+	assert.NoError(t, err)
+	mockInvoiceRepo.AssertExpectations(t)
+	mockKafka.AssertExpectations(t)
+}
+
+func TestInvoiceUsecase_Delete_GetByIDError(t *testing.T) {
+	mockInvoiceRepo := new(mockInvoiceRepository)
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	mockKafka := new(mockKafkaProducer)
+
+	usecase := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafka)
+
+	invoiceID := uuid.New()
+	mockInvoiceRepo.On("GetByID", invoiceID).Return(nil, errors.New("invoice not found"))
+
+	err := usecase.Delete(invoiceID)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invoice not found")
+	mockInvoiceRepo.AssertExpectations(t)
+	mockInvoiceRepo.AssertNotCalled(t, "Delete")
+}
+
+func TestInvoiceUsecase_Delete_DeleteError(t *testing.T) {
+	mockInvoiceRepo := new(mockInvoiceRepository)
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	mockKafka := new(mockKafkaProducer)
+
+	usecase := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafka)
+
+	invoiceID := uuid.New()
+	invoice := &domain.Invoice{
+		ID:            invoiceID,
+		InvoiceNumber: "INV-2024-001",
+	}
+
+	mockInvoiceRepo.On("GetByID", invoiceID).Return(invoice, nil)
+	mockInvoiceRepo.On("Delete", invoiceID).Return(errors.New("delete failed"))
+
+	err := usecase.Delete(invoiceID)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "delete failed")
+	mockInvoiceRepo.AssertExpectations(t)
+}
+
+func TestInvoiceUsecase_Delete_SendToKafkaError(t *testing.T) {
+	mockInvoiceRepo := new(mockInvoiceRepository)
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	mockKafka := new(mockKafkaProducer)
+
+	usecase := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafka)
+
+	invoiceID := uuid.New()
+	invoice := &domain.Invoice{
+		ID:            invoiceID,
+		InvoiceNumber: "INV-2024-001",
+	}
+
+	mockInvoiceRepo.On("GetByID", invoiceID).Return(invoice, nil)
+	mockInvoiceRepo.On("Delete", invoiceID).Return(nil)
+	mockKafka.On("SendMessage", "invoices", invoiceID.String(), mock.AnythingOfType("[]uint8")).Return(errors.New("kafka error"))
+
+	err := usecase.Delete(invoiceID)
+
+	// Should still succeed even if Kafka fails
 	assert.NoError(t, err)
 	mockInvoiceRepo.AssertExpectations(t)
 	mockKafka.AssertExpectations(t)
@@ -522,6 +650,75 @@ func TestInvoiceUsecase_GetByStatus_Success(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedInvoices, invoices)
+	mockInvoiceRepo.AssertExpectations(t)
+}
+
+func TestInvoiceUsecase_GetByStatus_Error(t *testing.T) {
+	mockInvoiceRepo := new(mockInvoiceRepository)
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	mockKafka := new(mockKafkaProducer)
+
+	usecase := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafka)
+
+	mockInvoiceRepo.On("GetByStatus", domain.InvoiceStatusPaid, 10, 0).Return(([]*domain.Invoice)(nil), errors.New("database error"))
+
+	invoices, err := usecase.GetByStatus(domain.InvoiceStatusPaid, 10, 0)
+
+	assert.Error(t, err)
+	assert.Nil(t, invoices)
+	assert.Contains(t, err.Error(), "database error")
+	mockInvoiceRepo.AssertExpectations(t)
+}
+
+func TestInvoiceUsecase_GetByStatus_WithPagination(t *testing.T) {
+	mockInvoiceRepo := new(mockInvoiceRepository)
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	mockKafka := new(mockKafkaProducer)
+
+	usecase := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafka)
+
+	tests := []struct {
+		name           string
+		inputLimit     int
+		inputOffset    int
+		expectedLimit  int
+		expectedOffset int
+	}{
+		{
+			name:           "default limit",
+			inputLimit:     0,
+			inputOffset:    0,
+			expectedLimit:  10,
+			expectedOffset: 0,
+		},
+		{
+			name:           "max limit cap",
+			inputLimit:     200,
+			inputOffset:    0,
+			expectedLimit:  100,
+			expectedOffset: 0,
+		},
+		{
+			name:           "negative offset",
+			inputLimit:     10,
+			inputOffset:    -5,
+			expectedLimit:  10,
+			expectedOffset: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockInvoiceRepo.On("GetByStatus", domain.InvoiceStatusPaid, tt.expectedLimit, tt.expectedOffset).Return([]*domain.Invoice{}, nil).Once()
+
+			_, err := usecase.GetByStatus(domain.InvoiceStatusPaid, tt.inputLimit, tt.inputOffset)
+
+			assert.NoError(t, err)
+		})
+	}
+
 	mockInvoiceRepo.AssertExpectations(t)
 }
 

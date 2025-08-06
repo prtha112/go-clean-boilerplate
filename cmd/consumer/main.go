@@ -55,14 +55,14 @@ func main() {
 	})
 	defer kafka.Close()
 
-	// Initialize repositories
+	// Initialize repositories and use cases
 	repo := repository.NewInvoicePostgres(db)
-	// Initialize use case for Kafka consumer
 	uc := usecase.NewInvoiceKafkaUsecase(repo)
 
 	// Initialize Kafka consumer
 	consumer := internalKafka.NewInvoiceConsumer(kafka, uc)
 	defer consumer.Close()
+
 	// Start consuming messages
 	consumer.Start(ctx)
 }

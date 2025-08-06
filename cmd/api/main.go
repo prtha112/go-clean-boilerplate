@@ -28,6 +28,7 @@ func main() {
 		SSLMode:  cfg.Database.SSLMode,
 	}
 
+	// Create a new PostgreSQL connection using pkg/database
 	db, err := database.NewPostgresConnection(dbConfig)
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)

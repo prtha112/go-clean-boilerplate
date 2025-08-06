@@ -35,7 +35,7 @@ func main() {
 	defer database.CloseConnection(db)
 
 	// Initialize Kafka producer
-	kafkaProducer := kafka.NewKafkaProducer(&kafka.Config{
+	kafkaProducer := kafka.NewKafkaProducer(&kafka.ConfigProducer{
 		Brokers: cfg.Kafka.Brokers,
 		Topic:   cfg.Kafka.Topic,
 	})

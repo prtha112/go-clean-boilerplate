@@ -6,8 +6,6 @@ import (
 	"log"
 	"time"
 
-	"go-clean-v2/internal/domain"
-
 	"github.com/segmentio/kafka-go"
 )
 
@@ -150,13 +148,4 @@ func (c *kafkaConsumer) Close() error {
 		return c.reader.Close()
 	}
 	return nil
-}
-
-// Helper function to create a simple Kafka producer for testing
-func NewSimpleProducer(brokers []string) domain.KafkaProducer {
-	config := &ConfigProducer{
-		Brokers: brokers,
-		Topic:   "invoices", // default topic
-	}
-	return NewKafkaProducer(config)
 }

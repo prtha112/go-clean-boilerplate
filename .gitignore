@@ -1,3 +1,4 @@
 # Ignore local Postgres data
 postgres_data/
 bin/
+./main

@@ -190,6 +190,25 @@ go run cmd/main.go -service=consumer
 
 The consumer listens for invoice events and logs them to the console.
 
+### Kafka Invoice Event Example
+
+When producing invoice item logs to Kafka, use the following JSON payload format:
+
+```json
+{
+  "invoice_id": 12345,
+  "product_id": 67890,
+  "description": "สินค้า A",
+  "quantity": 2,
+  "unit_price": 150.0,
+  "total_price": 300.0
+}
+```
+
+This payload matches the structure of `InvoiceKafka` and is used for logging invoice items via the consumer service.
+
+---
+
 ## Usage Examples
 
 ### 1. Register and Login

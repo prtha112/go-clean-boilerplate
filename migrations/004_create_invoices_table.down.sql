@@ -6,5 +6,6 @@ DROP INDEX IF EXISTS idx_invoices_due_date;
 DROP INDEX IF EXISTS idx_invoices_status;
 DROP INDEX IF EXISTS idx_invoices_customer_email;
 DROP INDEX IF EXISTS idx_invoices_invoice_number;
+DROP TABLE IF EXISTS invoice_item_logs;
 DROP TABLE IF EXISTS invoice_items;
 DROP TABLE IF EXISTS invoices;

@@ -30,6 +30,18 @@ CREATE TABLE invoice_items (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+CREATE TABLE invoice_item_logs (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    invoice_id INTEGER NOT NULL,
+    product_id INTEGER NOT NULL,
+    description TEXT NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
+    total_price DECIMAL(10,2) NOT NULL CHECK (total_price >= 0),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Indexes for invoices table
 CREATE INDEX idx_invoices_invoice_number ON invoices(invoice_number);
 CREATE INDEX idx_invoices_customer_email ON invoices(customer_email);

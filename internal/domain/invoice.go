@@ -17,8 +17,13 @@ const (
 )
 
 type InvoiceKafka struct {
-	ID     int64   `json:"id"`
-	Amount float64 `json:"amount"`
+	ID          uuid.UUID `json:"id" db:"id"`
+	InvoiceID   int       `json:"invoice_id" db:"invoice_id"`
+	ProductID   int       `json:"product_id" db:"product_id"`
+	Description string    `json:"description" db:"description"`
+	Quantity    int       `json:"quantity" db:"quantity"`
+	UnitPrice   float64   `json:"unit_price" db:"unit_price"`
+	TotalPrice  float64   `json:"total_price" db:"total_price"`
 }
 
 type InvoiceKafkaRepository interface {

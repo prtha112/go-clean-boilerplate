@@ -14,3 +14,5 @@ CREATE INDEX idx_users_email ON users(email);
 -- Password hash for 'admin123' using bcrypt
 INSERT INTO users (username, email, password) VALUES 
 ('admin', 'admin@example.com', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+INSERT INTO users (username, email, password) VALUES 
+('testuser', 'test@example.com', '$2a$10$sAc1YtIzu5c6L0lkI6ZrfOTCS0R9FkB7tsBgRRtW0.EUnnNSPcfSK');

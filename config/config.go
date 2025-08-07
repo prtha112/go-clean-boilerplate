@@ -5,14 +5,17 @@ import (
 	"strconv"
 	"time"
 
+	"go-clean-boilerplate/pkg/database"
+	"go-clean-boilerplate/pkg/kafka"
+
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
 	Server   ServerConfig
-	Database DatabaseConfig
+	Database database.Config
 	JWT      JWTConfig
-	Kafka    KafkaConfig
+	Kafka    kafka.Config
 }
 
 type ServerConfig struct {
@@ -20,35 +23,8 @@ type ServerConfig struct {
 	Host string
 }
 
-type DatabaseConfig struct {
-	Host               string
-	Port               string
-	User               string
-	Password           string
-	DBName             string
-	SSLMode            string
-	SetConnMaxLifetime int // in seconds
-	SetMaxOpenConns    int // max open connections
-	SetMaxIdleConns    int // max idle connections
-}
-
 type JWTConfig struct {
 	Secret string
-}
-
-type KafkaConfig struct {
-	Brokers                []string
-	Topic                  string
-	GroupID                string
-	ReadTimeout            time.Duration
-	MinBytes               int
-	MaxBytes               int
-	MaxWait                time.Duration
-	CommitInterval         time.Duration
-	QueueCapacity          int
-	ReadLagInterval        time.Duration
-	WatchPartitionChanges  bool
-	PartitionWatchInterval time.Duration
 }
 
 func Load() (*Config, error) {
@@ -60,7 +36,7 @@ func Load() (*Config, error) {
 			Port: getEnv("SERVER_PORT", "8080"),
 			Host: getEnv("SERVER_HOST", "localhost"),
 		},
-		Database: DatabaseConfig{
+		Database: database.Config{
 			Host:               getEnv("DB_HOST", "localhost"),
 			Port:               getEnv("DB_PORT", "7775"),
 			User:               getEnv("DB_USER", "postgres"),
@@ -74,7 +50,7 @@ func Load() (*Config, error) {
 		JWT: JWTConfig{
 			Secret: getEnv("JWT_SECRET", "your-secret-key-change-this-in-production"),
 		},
-		Kafka: KafkaConfig{
+		Kafka: kafka.Config{
 			Brokers:                []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
 			Topic:                  getEnv("KAFKA_TOPIC", "invoices"),
 			GroupID:                getEnv("KAFKA_GROUP_ID", "invoice-group"),

@@ -109,7 +109,7 @@ func runConsumer(cfg *config.Config, db *sql.DB, kafka kafka.KafkaConsumer) {
 }
 
 func initKafkaProducer(cfg *config.Config) kafka.KafkaProducer {
-	kafkaProducer := kafka.NewKafkaProducer(&kafka.ConfigProducer{
+	kafkaProducer := kafka.NewKafkaProducer(&kafka.Config{
 		Brokers: cfg.Kafka.Brokers,
 		Topic:   cfg.Kafka.Topic,
 	})
@@ -117,7 +117,7 @@ func initKafkaProducer(cfg *config.Config) kafka.KafkaProducer {
 }
 
 func initKafkaConsumer(cfg *config.Config) kafka.KafkaConsumer {
-	kafkaConsumer := kafka.NewKafkaConsumer(&kafka.ConfigConsumer{
+	kafkaConsumer := kafka.NewKafkaConsumer(&kafka.Config{
 		Brokers:                cfg.Kafka.Brokers,
 		Topic:                  cfg.Kafka.Topic,
 		GroupID:                cfg.Kafka.GroupID,

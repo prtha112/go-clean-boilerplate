@@ -15,36 +15,21 @@ type kafkaProducer struct {
 
 type kafkaConsumer struct {
 	reader *kafka.Reader
-	config *ConfigConsumer
+	config *Config
 }
 
-type ConfigProducer struct {
-	Brokers []string
-	Topic   string
-}
-
-type ConfigConsumer struct {
-	Brokers []string
-	Topic   string
-	GroupID string
-	// ReadTimeout is the timeout for reading messages from Kafka
-	// If 0, no timeout is applied
-	ReadTimeout time.Duration
-	// MinBytes is the minimum number of bytes to fetch in a request
-	MinBytes int
-	// MaxBytes is the maximum number of bytes to fetch in a request
-	MaxBytes int
-	// MaxWait is the maximum amount of time to wait for new data before returning
-	MaxWait time.Duration
-	// CommitInterval is how often to commit offsets
-	CommitInterval time.Duration
-	// QueueCapacity is the size of the internal message queue
-	QueueCapacity int
-	// ReadLagInterval is how often to report the reader's lag
-	ReadLagInterval time.Duration
-	// WatchPartitionChanges enables watching for partition changes
-	WatchPartitionChanges bool
-	// PartitionWatchInterval is how often to watch for partition changes
+type Config struct {
+	Brokers                []string
+	Topic                  string
+	GroupID                string
+	ReadTimeout            time.Duration
+	MinBytes               int
+	MaxBytes               int
+	MaxWait                time.Duration
+	CommitInterval         time.Duration
+	QueueCapacity          int
+	ReadLagInterval        time.Duration
+	WatchPartitionChanges  bool
 	PartitionWatchInterval time.Duration
 }
 
@@ -58,7 +43,7 @@ type KafkaConsumer interface {
 	Close() error
 }
 
-func NewKafkaProducer(config *ConfigProducer) KafkaProducer {
+func NewKafkaProducer(config *Config) KafkaProducer {
 	writer := &kafka.Writer{
 		Addr:         kafka.TCP(config.Brokers...),
 		Topic:        config.Topic,
@@ -76,7 +61,7 @@ func NewKafkaProducer(config *ConfigProducer) KafkaProducer {
 	}
 }
 
-func NewKafkaConsumer(config *ConfigConsumer) KafkaConsumer {
+func NewKafkaConsumer(config *Config) KafkaConsumer {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:                config.Brokers,
 		Topic:                  config.Topic,

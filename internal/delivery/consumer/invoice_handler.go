@@ -29,6 +29,8 @@ func (c *InvoiceConsumer) Start(ctx context.Context) {
 			continue
 		}
 
+		log.Printf("Kafka message payload: %s", string(msg.Value))
+
 		var inv domain.InvoiceKafka
 		if err := json.Unmarshal(msg.Value, &inv); err != nil {
 			log.Println("Unmarshal error:", err)

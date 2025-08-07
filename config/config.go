@@ -21,12 +21,15 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-	SSLMode  string
+	Host               string
+	Port               string
+	User               string
+	Password           string
+	DBName             string
+	SSLMode            string
+	SetConnMaxLifetime int // in seconds
+	SetMaxOpenConns    int // max open connections
+	SetMaxIdleConns    int // max idle connections
 }
 
 type JWTConfig struct {
@@ -58,12 +61,15 @@ func Load() (*Config, error) {
 			Host: getEnv("SERVER_HOST", "localhost"),
 		},
 		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "localhost"),
-			Port:     getEnv("DB_PORT", "7775"),
-			User:     getEnv("DB_USER", "postgres"),
-			Password: getEnv("DB_PASSWORD", "password"),
-			DBName:   getEnv("DB_NAME", "go_clean_db"),
-			SSLMode:  getEnv("DB_SSLMODE", "disable"),
+			Host:               getEnv("DB_HOST", "localhost"),
+			Port:               getEnv("DB_PORT", "7775"),
+			User:               getEnv("DB_USER", "postgres"),
+			Password:           getEnv("DB_PASSWORD", "password"),
+			DBName:             getEnv("DB_NAME", "go_clean_db"),
+			SSLMode:            getEnv("DB_SSLMODE", "disable"),
+			SetConnMaxLifetime: getEnvAsInt("DB_CONN_MAX_LIFETIME", 3600),
+			SetMaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 5),
+			SetMaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 1),
 		},
 		JWT: JWTConfig{
 			Secret: getEnv("JWT_SECRET", "your-secret-key-change-this-in-production"),

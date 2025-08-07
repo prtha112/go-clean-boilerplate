@@ -203,6 +203,7 @@ When producing invoice item logs to Kafka, use the following JSON payload format
   "unit_price": 150.0,
   "total_price": 300.0
 }
+{"invoice_id": 12345,"product_id": 67890,"description": "สินค้า A","quantity": 2,"unit_price": 150.0,"total_price": 300.0}
 ```
 
 This payload matches the structure of `InvoiceKafka` and is used for logging invoice items via the consumer service.

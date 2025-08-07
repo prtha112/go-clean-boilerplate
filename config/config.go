@@ -5,38 +5,21 @@ import (
 	"strconv"
 	"time"
 
-	"go-clean-boilerplate/pkg/database"
-	"go-clean-boilerplate/pkg/kafka"
+	"go-clean-boilerplate/internal/domain"
 
 	"github.com/joho/godotenv"
 )
 
-type Config struct {
-	Server   ServerConfig
-	Database database.Config
-	JWT      JWTConfig
-	Kafka    kafka.Config
-}
-
-type ServerConfig struct {
-	Port string
-	Host string
-}
-
-type JWTConfig struct {
-	Secret string
-}
-
-func Load() (*Config, error) {
+func Load() (*domain.Config, error) {
 	// Load .env file if it exists
 	_ = godotenv.Load()
 
-	config := &Config{
-		Server: ServerConfig{
+	config := &domain.Config{
+		Server: domain.ServerConfig{
 			Port: getEnv("SERVER_PORT", "8080"),
 			Host: getEnv("SERVER_HOST", "localhost"),
 		},
-		Database: database.Config{
+		Database: domain.DatabaseConfig{
 			Host:               getEnv("DB_HOST", "localhost"),
 			Port:               getEnv("DB_PORT", "7775"),
 			User:               getEnv("DB_USER", "postgres"),
@@ -47,10 +30,10 @@ func Load() (*Config, error) {
 			SetMaxOpenConns:    getEnvAsInt("DB_MAX_OPEN_CONNS", 5),
 			SetMaxIdleConns:    getEnvAsInt("DB_MAX_IDLE_CONNS", 1),
 		},
-		JWT: JWTConfig{
+		JWT: domain.JWTConfig{
 			Secret: getEnv("JWT_SECRET", "your-secret-key-change-this-in-production"),
 		},
-		Kafka: kafka.Config{
+		Kafka: domain.KafkaConfig{
 			Brokers:                []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
 			Topic:                  getEnv("KAFKA_TOPIC", "invoices"),
 			GroupID:                getEnv("KAFKA_GROUP_ID", "invoice-group"),

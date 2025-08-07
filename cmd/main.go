@@ -11,6 +11,7 @@ import (
 	"go-clean-boilerplate/config"
 	internalKafka "go-clean-boilerplate/internal/delivery/consumer"
 	httpDelivery "go-clean-boilerplate/internal/delivery/http"
+	"go-clean-boilerplate/internal/domain"
 	"go-clean-boilerplate/internal/repository"
 	"go-clean-boilerplate/internal/usecase"
 	"go-clean-boilerplate/pkg/database"
@@ -36,7 +37,7 @@ func main() {
 	}
 
 	// Connect to database
-	dbConfig := &database.Config{
+	dbConfig := &domain.DatabaseConfig{
 		Host:     cfg.Database.Host,
 		Port:     cfg.Database.Port,
 		User:     cfg.Database.User,
@@ -64,7 +65,7 @@ func main() {
 	}
 }
 
-func runAPI(cfg *config.Config, db *sql.DB, kafkaProducer kafka.KafkaProducer) {
+func runAPI(cfg *domain.Config, db *sql.DB, kafkaProducer kafka.KafkaProducer) {
 	// Initialize repositories
 	productRepo := repository.NewProductRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
@@ -90,7 +91,7 @@ func runAPI(cfg *config.Config, db *sql.DB, kafkaProducer kafka.KafkaProducer) {
 	}
 }
 
-func runConsumer(cfg *config.Config, db *sql.DB, kafka kafka.KafkaConsumer) {
+func runConsumer(cfg *domain.Config, db *sql.DB, kafka kafka.KafkaConsumer) {
 	ctx := context.Background()
 
 	// Initialize repositories and use cases
@@ -108,16 +109,16 @@ func runConsumer(cfg *config.Config, db *sql.DB, kafka kafka.KafkaConsumer) {
 	consumer.Start(ctx)
 }
 
-func initKafkaProducer(cfg *config.Config) kafka.KafkaProducer {
-	kafkaProducer := kafka.NewKafkaProducer(&kafka.Config{
+func initKafkaProducer(cfg *domain.Config) kafka.KafkaProducer {
+	kafkaProducer := kafka.NewKafkaProducer(&domain.KafkaConfig{
 		Brokers: cfg.Kafka.Brokers,
 		Topic:   cfg.Kafka.Topic,
 	})
 	return kafkaProducer
 }
 
-func initKafkaConsumer(cfg *config.Config) kafka.KafkaConsumer {
-	kafkaConsumer := kafka.NewKafkaConsumer(&kafka.Config{
+func initKafkaConsumer(cfg *domain.Config) kafka.KafkaConsumer {
+	kafkaConsumer := kafka.NewKafkaConsumer(&domain.KafkaConfig{
 		Brokers:                cfg.Kafka.Brokers,
 		Topic:                  cfg.Kafka.Topic,
 		GroupID:                cfg.Kafka.GroupID,

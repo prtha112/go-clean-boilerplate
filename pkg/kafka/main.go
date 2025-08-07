@@ -6,6 +6,8 @@ import (
 	"log"
 	"time"
 
+	"go-clean-boilerplate/internal/domain"
+
 	"github.com/segmentio/kafka-go"
 )
 
@@ -15,22 +17,7 @@ type kafkaProducer struct {
 
 type kafkaConsumer struct {
 	reader *kafka.Reader
-	config *Config
-}
-
-type Config struct {
-	Brokers                []string
-	Topic                  string
-	GroupID                string
-	ReadTimeout            time.Duration
-	MinBytes               int
-	MaxBytes               int
-	MaxWait                time.Duration
-	CommitInterval         time.Duration
-	QueueCapacity          int
-	ReadLagInterval        time.Duration
-	WatchPartitionChanges  bool
-	PartitionWatchInterval time.Duration
+	config *domain.KafkaConfig
 }
 
 type KafkaProducer interface {
@@ -43,7 +30,7 @@ type KafkaConsumer interface {
 	Close() error
 }
 
-func NewKafkaProducer(config *Config) KafkaProducer {
+func NewKafkaProducer(config *domain.KafkaConfig) KafkaProducer {
 	writer := &kafka.Writer{
 		Addr:         kafka.TCP(config.Brokers...),
 		Topic:        config.Topic,
@@ -61,7 +48,7 @@ func NewKafkaProducer(config *Config) KafkaProducer {
 	}
 }
 
-func NewKafkaConsumer(config *Config) KafkaConsumer {
+func NewKafkaConsumer(config *domain.KafkaConfig) KafkaConsumer {
 	reader := kafka.NewReader(kafka.ReaderConfig{
 		Brokers:                config.Brokers,
 		Topic:                  config.Topic,

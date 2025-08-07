@@ -3,25 +3,14 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"go-clean-boilerplate/internal/domain"
 	"log"
 	"time"
 
 	_ "github.com/lib/pq"
 )
 
-type Config struct {
-	Host               string
-	Port               string
-	User               string
-	Password           string
-	DBName             string
-	SSLMode            string
-	SetConnMaxLifetime int // in seconds
-	SetMaxOpenConns    int // max open connections
-	SetMaxIdleConns    int // max idle connections
-}
-
-func NewPostgresConnection(cfg *Config) (*sql.DB, error) {
+func NewPostgresConnection(cfg *domain.DatabaseConfig) (*sql.DB, error) {
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.DBName, cfg.SSLMode)
 

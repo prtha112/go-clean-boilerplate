@@ -26,17 +26,6 @@ type InvoiceKafka struct {
 	TotalPrice  float64   `json:"total_price" db:"total_price"`
 }
 
-type InvoiceKafkaRepository interface {
-	Save(*InvoiceKafka) error
-}
-
-// InvoiceKafkaUsecase defines กกกthe business logic contract for processing
-// invoice events consumed from Kafka. Delivery layers should depend on this
-// interface rather than concrete implementations.
-type InvoiceKafkaUsecase interface {
-	HandleInvoice(inv *InvoiceKafka) error
-}
-
 type InvoiceItem struct {
 	ID          uuid.UUID `json:"id" db:"id"`
 	InvoiceID   uuid.UUID `json:"invoice_id" db:"invoice_id"`
@@ -128,4 +117,12 @@ type InvoiceUsecase interface {
 type KafkaProducer interface {
 	SendMessage(topic string, key string, message []byte) error
 	Close() error
+}
+
+type InvoiceKafkaRepository interface {
+	Save(*InvoiceKafka) error
+}
+
+type InvoiceKafkaUsecase interface {
+	HandleInvoice(inv *InvoiceKafka) error
 }

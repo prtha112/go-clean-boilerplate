@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"go-clean-boilerplate/config"
-	internalKafka "go-clean-boilerplate/internal/delivery/consumer"
+	consumerDelivery "go-clean-boilerplate/internal/delivery/consumer"
 	httpDelivery "go-clean-boilerplate/internal/delivery/http"
 	"go-clean-boilerplate/internal/domain"
 	"go-clean-boilerplate/internal/repository"
@@ -98,15 +98,18 @@ func runConsumer(cfg *domain.Config, db *sql.DB, kafka kafka.KafkaConsumer) {
 	repo := repository.NewInvoicePostgres(db)
 	uc := usecase.NewInvoiceKafkaUsecase(repo)
 
-	// Initialize Kafka consumer
-	consumer := internalKafka.NewInvoiceConsumer(kafka, uc)
-	defer consumer.Close()
+	// Initialize consumer router (mirrors HTTP router pattern) and register workers
+	router := consumerDelivery.NewRouter()
+	defer router.Close()
+
+	// Register invoice topic worker
+	router.Register(kafka, consumerDelivery.NewInvoiceHandler(uc), "invoices")
 
 	log.Print("Brokers:", cfg.Kafka.Brokers)
 	log.Println("Topic:", cfg.Kafka.Topic)
 	log.Println("Group ID:", cfg.Kafka.GroupID)
 	// Start consuming messages
-	consumer.Start(ctx)
+	router.Start(ctx)
 }
 
 func initKafkaProducer(cfg *domain.Config) kafka.KafkaProducer {

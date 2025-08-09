@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"time"
 )
 
@@ -45,4 +46,8 @@ type KafkaConfig struct {
 	ReadLagInterval        time.Duration
 	WatchPartitionChanges  bool
 	PartitionWatchInterval time.Duration
+}
+
+type Handler interface {
+	Handle(ctx context.Context, key []byte, value []byte) error
 }

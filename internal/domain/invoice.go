@@ -30,6 +30,13 @@ type InvoiceKafkaRepository interface {
 	Save(*InvoiceKafka) error
 }
 
+// InvoiceKafkaUsecase defines กกกthe business logic contract for processing
+// invoice events consumed from Kafka. Delivery layers should depend on this
+// interface rather than concrete implementations.
+type InvoiceKafkaUsecase interface {
+	HandleInvoice(inv *InvoiceKafka) error
+}
+
 type InvoiceItem struct {
 	ID          uuid.UUID `json:"id" db:"id"`
 	InvoiceID   uuid.UUID `json:"invoice_id" db:"invoice_id"`

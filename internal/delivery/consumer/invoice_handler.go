@@ -12,6 +12,7 @@ type InvoiceHandler struct {
 	usecase domain.InvoiceKafkaUsecase
 }
 
+// NewInvoiceHandler creates a new InvoiceHandler with the given usecase.
 func NewInvoiceHandler(uc domain.InvoiceKafkaUsecase) *InvoiceHandler {
 	return &InvoiceHandler{usecase: uc}
 }

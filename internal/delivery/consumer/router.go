@@ -38,9 +38,11 @@ func (r *Router) Start(ctx context.Context) {
 
 	log.Printf("Starting %d Kafka worker(s)...", len(r.workers))
 
+	// WaitGroup to wait for all workers to finish
 	var wg sync.WaitGroup
 	wg.Add(len(r.workers))
 
+	// Start each worker in a goroutine
 	for idx := range r.workers {
 		w := r.workers[idx]
 		go func(w worker) {

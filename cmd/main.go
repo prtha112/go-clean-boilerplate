@@ -51,7 +51,7 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to connect to database:", err)
 	}
-	defer database.CloseConnection(db)
+	defer database.Close(db)
 
 	switch *service {
 	case "api":

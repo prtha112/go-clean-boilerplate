@@ -32,7 +32,7 @@ func NewPostgresConnection(cfg *domain.DatabaseConfig) (*sql.DB, error) {
 	return db, nil
 }
 
-func CloseConnection(db *sql.DB) {
+func Close(db *sql.DB) {
 	if err := db.Close(); err != nil {
 		log.Printf("Error closing database connection: %v", err)
 	}

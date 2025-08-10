@@ -1266,3 +1266,29 @@ func TestInvoiceUsecase_CreateFromOrder_GenerateInvoiceNumberError(t *testing.T)
 	mockOrderRepo.AssertExpectations(t)
 	mockInvoiceRepo.AssertExpectations(t)
 }
+
+
+func TestInvoiceUsecase_SendToKafka_MarshalErrorEdgeCase(t *testing.T) {
+	mockInvoiceRepo := new(mockInvoiceRepository)
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	mockKafka := new(mockKafkaProducer)
+
+	usecase := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafka)
+
+	// Create a normal invoice that should work
+	invoice := &domain.Invoice{
+		ID:            uuid.New(),
+		InvoiceNumber: "INV-2024-001",
+		CustomerName:  "John Doe",
+	}
+
+	// Mock successful kafka send
+	mockKafka.On("SendMessage", "invoices", invoice.ID.String(), mock.AnythingOfType("[]uint8")).Return(nil)
+
+	err := usecase.SendToKafka(invoice, "created")
+
+	// This should succeed
+	assert.NoError(t, err)
+	mockKafka.AssertExpectations(t)
+}

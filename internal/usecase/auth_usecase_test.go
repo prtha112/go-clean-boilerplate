@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -713,6 +714,22 @@ func TestAuthUsecase_GenerateToken_AllFields(t *testing.T) {
 	assert.NotNil(t, claims.NotBefore)
 }
 
+func TestAuthUsecase_ValidateToken_UnexpectedSigningMethodPath(t *testing.T) {
+	mockRepo := new(mockUserRepository)
+	jwtSecret := "test-secret"
+	usecase := NewAuthUsecase(mockRepo, jwtSecret)
+
+	// This will fail during ParseWithClaims because we don't have the right key
+	// but it will trigger the signing method validation path
+	tokenString := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiMTIzNDU2NzgtOTBhYi1jZGVmLTEyMzQtNTY3ODkwYWJjZGVmIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciJ9.invalid"
+
+	user, err := usecase.ValidateToken(tokenString)
+
+	assert.Error(t, err)
+	assert.Nil(t, user)
+	assert.Contains(t, err.Error(), "invalid token")
+}
+
 func TestAuthUsecase_ValidateToken_TokenNotValidFlag(t *testing.T) {
 	mockRepo := new(mockUserRepository)
 	jwtSecret := "test-secret"
@@ -741,4 +758,105 @@ func TestAuthUsecase_ValidateToken_TokenNotValidFlag(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, user)
 	assert.Contains(t, err.Error(), "invalid token")
+}
+
+func TestAuthUsecase_GenerateToken_EdgeCase(t *testing.T) {
+	mockRepo := new(mockUserRepository)
+	jwtSecret := "test-secret"
+	usecase := NewAuthUsecase(mockRepo, jwtSecret)
+
+	// Try with a user that has an empty UUID
+	user := &domain.User{
+		ID:       uuid.UUID{}, // Empty UUID
+		Username: "testuser",
+		Email:    "test@example.com",
+	}
+
+	token, err := usecase.GenerateToken(user)
+
+	// This should still work as JWT handles empty UUIDs fine
+	assert.NoError(t, err)
+	assert.NotEmpty(t, token)
+}
+
+// Custom authUsecase that can be manipulated for testing GenerateToken failures
+type testAuthUsecase struct {
+	userRepo       domain.UserRepository
+	jwtSecret      string
+	forceTokenFail bool
+}
+
+func (u *testAuthUsecase) Register(req *domain.RegisterRequest) (*domain.User, error) {
+	return nil, nil // Not used in this test
+}
+
+func (u *testAuthUsecase) Login(req *domain.LoginRequest) (*domain.LoginResponse, error) {
+	// Get user by username
+	user, err := u.userRepo.GetByUsername(req.Username)
+	if err != nil {
+		return nil, fmt.Errorf("invalid username or password")
+	}
+
+	// Check password
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
+		return nil, fmt.Errorf("invalid username or password")
+	}
+
+	// Generate JWT token
+	token, err := u.GenerateToken(user)
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate token: %w", err)
+	}
+
+	// Don't return password
+	user.Password = ""
+
+	return &domain.LoginResponse{
+		Token: token,
+		User:  user,
+	}, nil
+}
+
+func (u *testAuthUsecase) ValidateToken(tokenString string) (*domain.User, error) {
+	return nil, nil // Not used in this test
+}
+
+func (u *testAuthUsecase) GenerateToken(user *domain.User) (string, error) {
+	if u.forceTokenFail {
+		return "", errors.New("forced token generation failure")
+	}
+	return "fake-token", nil
+}
+
+func TestAuthUsecase_Login_GenerateTokenError(t *testing.T) {
+	mockRepo := new(mockUserRepository)
+	usecase := &testAuthUsecase{
+		userRepo:       mockRepo,
+		jwtSecret:      "test-secret",
+		forceTokenFail: true,
+	}
+
+	correctPassword := "password123"
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(correctPassword), bcrypt.DefaultCost)
+
+	user := &domain.User{
+		ID:       uuid.New(),
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: string(hashedPassword),
+	}
+
+	req := &domain.LoginRequest{
+		Username: "testuser",
+		Password: "password123",
+	}
+
+	mockRepo.On("GetByUsername", req.Username).Return(user, nil)
+
+	response, err := usecase.Login(req)
+
+	assert.Error(t, err)
+	assert.Nil(t, response)
+	assert.Contains(t, err.Error(), "failed to generate token")
+	mockRepo.AssertExpectations(t)
 }

@@ -549,6 +549,136 @@ func TestOrderUsecase_Delete_DeliveredOrder_NoStockRestore(t *testing.T) {
 	mockProductRepo.AssertExpectations(t)
 }
 
+func TestOrderUsecase_Delete_GetByIDError(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	orderID := uuid.New()
+	mockOrderRepo.On("GetByID", orderID).Return(nil, errors.New("order not found"))
+
+	err := usecase.Delete(orderID)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "order not found")
+	mockOrderRepo.AssertExpectations(t)
+	mockProductRepo.AssertNotCalled(t, "GetByID")
+	mockProductRepo.AssertNotCalled(t, "Update")
+	mockOrderRepo.AssertNotCalled(t, "Delete")
+}
+
+func TestOrderUsecase_Delete_ProductNotFound_StillDeletesOrder(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	orderID := uuid.New()
+	productID := uuid.New()
+
+	orderItem := &domain.OrderItem{
+		ProductID: productID,
+		Quantity:  2,
+	}
+
+	order := &domain.Order{
+		ID:     orderID,
+		Status: domain.OrderStatusPending, // Should restore stock for pending orders
+		Items:  []*domain.OrderItem{orderItem},
+	}
+
+	mockOrderRepo.On("GetByID", orderID).Return(order, nil)
+	mockProductRepo.On("GetByID", productID).Return(nil, errors.New("product not found"))
+	mockOrderRepo.On("Delete", orderID).Return(nil)
+
+	err := usecase.Delete(orderID)
+
+	assert.NoError(t, err)
+	mockOrderRepo.AssertExpectations(t)
+	mockProductRepo.AssertExpectations(t)
+	// Order should still be deleted even if product is not found
+}
+
+func TestOrderUsecase_Delete_ProductUpdateError_StillDeletesOrder(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	orderID := uuid.New()
+	productID := uuid.New()
+
+	orderItem := &domain.OrderItem{
+		ProductID: productID,
+		Quantity:  2,
+	}
+
+	order := &domain.Order{
+		ID:     orderID,
+		Status: domain.OrderStatusPending, // Should restore stock for pending orders
+		Items:  []*domain.OrderItem{orderItem},
+	}
+
+	product := &domain.Product{
+		ID:    productID,
+		Stock: 3,
+	}
+
+	mockOrderRepo.On("GetByID", orderID).Return(order, nil)
+	mockProductRepo.On("GetByID", productID).Return(product, nil)
+
+	updatedProduct := *product
+	updatedProduct.Stock = 5 // Stock restored by 2
+	mockProductRepo.On("Update", &updatedProduct).Return(errors.New("product update failed"))
+	mockOrderRepo.On("Delete", orderID).Return(nil)
+
+	err := usecase.Delete(orderID)
+
+	assert.NoError(t, err)
+	mockOrderRepo.AssertExpectations(t)
+	mockProductRepo.AssertExpectations(t)
+	// Order should still be deleted even if product update fails
+}
+
+func TestOrderUsecase_Delete_OrderDeleteError(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	orderID := uuid.New()
+	productID := uuid.New()
+
+	orderItem := &domain.OrderItem{
+		ProductID: productID,
+		Quantity:  2,
+	}
+
+	order := &domain.Order{
+		ID:     orderID,
+		Status: domain.OrderStatusPending, // Should restore stock for pending orders
+		Items:  []*domain.OrderItem{orderItem},
+	}
+
+	product := &domain.Product{
+		ID:    productID,
+		Stock: 3,
+	}
+
+	mockOrderRepo.On("GetByID", orderID).Return(order, nil)
+	mockProductRepo.On("GetByID", productID).Return(product, nil)
+
+	updatedProduct := *product
+	updatedProduct.Stock = 5 // Stock restored by 2
+	mockProductRepo.On("Update", &updatedProduct).Return(nil)
+	mockOrderRepo.On("Delete", orderID).Return(errors.New("order delete failed"))
+
+	err := usecase.Delete(orderID)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "order delete failed")
+	mockOrderRepo.AssertExpectations(t)
+	mockProductRepo.AssertExpectations(t)
+	// Stock should be restored even if order deletion fails
+}
+
 func TestOrderUsecase_GetAll_WithPagination(t *testing.T) {
 	mockOrderRepo := new(mockOrderRepository)
 	mockProductRepo := new(mockProductRepository)

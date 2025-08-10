@@ -334,6 +334,66 @@ func TestProductUsecase_Update_ProductNotFound(t *testing.T) {
 	mockRepo.AssertNotCalled(t, "Update")
 }
 
+func TestProductUsecase_Update_NegativePrice(t *testing.T) {
+	mockRepo := new(mockProductRepository)
+	usecase := NewProductUsecase(mockRepo)
+
+	product := &domain.Product{
+		ID:    uuid.New(),
+		Name:  "Updated Product",
+		Price: -10.00,
+		Stock: 20,
+	}
+
+	err := usecase.Update(product)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "product price cannot be negative")
+	mockRepo.AssertNotCalled(t, "GetByID")
+	mockRepo.AssertNotCalled(t, "Update")
+}
+
+func TestProductUsecase_Update_NegativeStock(t *testing.T) {
+	mockRepo := new(mockProductRepository)
+	usecase := NewProductUsecase(mockRepo)
+
+	product := &domain.Product{
+		ID:    uuid.New(),
+		Name:  "Updated Product",
+		Price: 149.99,
+		Stock: -5,
+	}
+
+	err := usecase.Update(product)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "product stock cannot be negative")
+	mockRepo.AssertNotCalled(t, "GetByID")
+	mockRepo.AssertNotCalled(t, "Update")
+}
+
+func TestProductUsecase_Update_RepositoryError(t *testing.T) {
+	mockRepo := new(mockProductRepository)
+	usecase := NewProductUsecase(mockRepo)
+
+	productID := uuid.New()
+	product := &domain.Product{
+		ID:    productID,
+		Name:  "Updated Product",
+		Price: 149.99,
+		Stock: 20,
+	}
+
+	mockRepo.On("GetByID", productID).Return(product, nil)
+	mockRepo.On("Update", product).Return(errors.New("database error"))
+
+	err := usecase.Update(product)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "database error")
+	mockRepo.AssertExpectations(t)
+}
+
 func TestProductUsecase_Delete_Success(t *testing.T) {
 	mockRepo := new(mockProductRepository)
 	usecase := NewProductUsecase(mockRepo)

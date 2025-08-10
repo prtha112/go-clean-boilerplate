@@ -2,4 +2,4 @@
 postgres_data/
 bin/
 ./main
-./coverage.out
+./coverage.*

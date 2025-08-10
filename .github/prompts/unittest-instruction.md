@@ -5,5 +5,5 @@ Write unit tests for the Go usecase layer by following these steps:
 - Create new unit tests: For each uncovered usecase, create a proper unit test file with meaningful test cases that focus on business logic.
 - Run test coverage check: After adding tests, run: go test ./internal usecase/... -cover to measure test coverage.
 - Improve coverage iteratively: If the coverage is less than 90%, continue writing more unit tests to improve it. Re-run the coverage check after each update.
-- Repeat the process until the overall coverage for ./internal/usecase/... is 90% or higher.
+- Repeat the process until the overall coverage for ./internal/usecase/... is 99% or higher.
 - If there are any test failures or errors, try to fix them automatically.

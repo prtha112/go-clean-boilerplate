@@ -745,3 +745,286 @@ func TestOrderUsecase_GetAll_DefaultAndMaxLimits(t *testing.T) {
 
 	mockOrderRepo.AssertExpectations(t)
 }
+
+func TestOrderUsecase_Create_ProductStockUpdateError_StillRollsBack(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	productID := uuid.New()
+	product := &domain.Product{
+		ID:    productID,
+		Name:  "Test Product",
+		Price: 50.00,
+		Stock: 10,
+	}
+
+	req := &domain.CreateOrderRequest{
+		CustomerName:  "John Doe",
+		CustomerEmail: "john@example.com",
+		Items: []struct {
+			ProductID uuid.UUID `json:"product_id" binding:"required"`
+			Quantity  int       `json:"quantity" binding:"required,min=1"`
+		}{
+			{
+				ProductID: productID,
+				Quantity:  2,
+			},
+		},
+	}
+
+	// Mock product repository calls
+	mockProductRepo.On("GetByID", productID).Return(product, nil)
+	mockProductRepo.On("Update", mock.AnythingOfType("*domain.Product")).Return(errors.New("stock update failed"))
+
+	order, err := usecase.Create(req)
+
+	assert.Error(t, err)
+	assert.Nil(t, order)
+	assert.Contains(t, err.Error(), "failed to update product stock")
+	mockOrderRepo.AssertNotCalled(t, "Create")
+	mockProductRepo.AssertExpectations(t)
+}
+
+func TestOrderUsecase_Delete_InvalidID(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	err := usecase.Delete(uuid.Nil)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid order ID")
+	mockOrderRepo.AssertNotCalled(t, "GetByID")
+	mockOrderRepo.AssertNotCalled(t, "Delete")
+}
+
+func TestOrderUsecase_UpdateStatus_InvalidID(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	err := usecase.UpdateStatus(uuid.Nil, domain.OrderStatusConfirmed)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid order ID")
+	mockOrderRepo.AssertNotCalled(t, "GetByID")
+	mockOrderRepo.AssertNotCalled(t, "Update")
+}
+
+func TestOrderUsecase_UpdateStatus_GetByIDError(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	orderID := uuid.New()
+	mockOrderRepo.On("GetByID", orderID).Return(nil, errors.New("order not found"))
+
+	err := usecase.UpdateStatus(orderID, domain.OrderStatusConfirmed)
+
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "order not found")
+	mockOrderRepo.AssertExpectations(t)
+	mockOrderRepo.AssertNotCalled(t, "Update")
+}
+
+func TestOrderUsecase_UpdateStatus_CancelOrder_ProductNotFound_StillUpdatesOrder(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	orderID := uuid.New()
+	productID := uuid.New()
+
+	orderItem := &domain.OrderItem{
+		ProductID: productID,
+		Quantity:  3,
+	}
+
+	order := &domain.Order{
+		ID:     orderID,
+		Status: domain.OrderStatusPending,
+		Items:  []*domain.OrderItem{orderItem},
+	}
+
+	mockOrderRepo.On("GetByID", orderID).Return(order, nil)
+	mockProductRepo.On("GetByID", productID).Return(nil, errors.New("product not found"))
+	mockOrderRepo.On("Update", mock.AnythingOfType("*domain.Order")).Return(nil)
+
+	err := usecase.UpdateStatus(orderID, domain.OrderStatusCancelled)
+
+	assert.NoError(t, err)
+	mockOrderRepo.AssertExpectations(t)
+	mockProductRepo.AssertExpectations(t)
+	// Order should still be updated even if product is not found
+}
+
+func TestOrderUsecase_UpdateStatus_CancelOrder_ProductUpdateError_StillUpdatesOrder(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	orderID := uuid.New()
+	productID := uuid.New()
+
+	orderItem := &domain.OrderItem{
+		ProductID: productID,
+		Quantity:  3,
+	}
+
+	order := &domain.Order{
+		ID:     orderID,
+		Status: domain.OrderStatusPending,
+		Items:  []*domain.OrderItem{orderItem},
+	}
+
+	product := &domain.Product{
+		ID:    productID,
+		Stock: 5,
+	}
+
+	mockOrderRepo.On("GetByID", orderID).Return(order, nil)
+	mockProductRepo.On("GetByID", productID).Return(product, nil)
+
+	updatedProduct := *product
+	updatedProduct.Stock = 8 // Stock restored by 3
+	mockProductRepo.On("Update", &updatedProduct).Return(errors.New("product update failed"))
+	mockOrderRepo.On("Update", mock.AnythingOfType("*domain.Order")).Return(nil)
+
+	err := usecase.UpdateStatus(orderID, domain.OrderStatusCancelled)
+
+	assert.NoError(t, err)
+	mockOrderRepo.AssertExpectations(t)
+	mockProductRepo.AssertExpectations(t)
+	// Order should still be updated even if product update fails
+}
+
+func TestOrderUsecase_UpdateStatus_AlreadyCancelled_NoStockRestore(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	orderID := uuid.New()
+	productID := uuid.New()
+
+	orderItem := &domain.OrderItem{
+		ProductID: productID,
+		Quantity:  3,
+	}
+
+	order := &domain.Order{
+		ID:     orderID,
+		Status: domain.OrderStatusCancelled, // Already cancelled
+		Items:  []*domain.OrderItem{orderItem},
+	}
+
+	mockOrderRepo.On("GetByID", orderID).Return(order, nil)
+	mockOrderRepo.On("Update", mock.AnythingOfType("*domain.Order")).Return(nil)
+	// No product repo calls expected since order is already cancelled
+
+	err := usecase.UpdateStatus(orderID, domain.OrderStatusCancelled)
+
+	assert.NoError(t, err)
+	mockOrderRepo.AssertExpectations(t)
+	mockProductRepo.AssertExpectations(t)
+}
+
+func TestOrderUsecase_Create_RollbackError_StillReturnsOriginalError(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	productID := uuid.New()
+	product := &domain.Product{
+		ID:    productID,
+		Name:  "Test Product",
+		Price: 50.00,
+		Stock: 10,
+	}
+
+	req := &domain.CreateOrderRequest{
+		CustomerName:  "John Doe",
+		CustomerEmail: "john@example.com",
+		Items: []struct {
+			ProductID uuid.UUID `json:"product_id" binding:"required"`
+			Quantity  int       `json:"quantity" binding:"required,min=1"`
+		}{
+			{
+				ProductID: productID,
+				Quantity:  2,
+			},
+		},
+	}
+
+	// Mock product repository calls
+	mockProductRepo.On("GetByID", productID).Return(product, nil)
+	updatedProduct := *product
+	updatedProduct.Stock = 8 // Stock reduced by 2
+	mockProductRepo.On("Update", &updatedProduct).Return(nil)
+
+	// Mock order creation failure
+	mockOrderRepo.On("Create", mock.AnythingOfType("*domain.Order")).Return(errors.New("database error"))
+
+	// Mock rollback calls - simulate rollback failure
+	rollbackProduct := *product
+	rollbackProduct.Stock = 10 // Stock restored
+	mockProductRepo.On("GetByID", productID).Return(&updatedProduct, nil)
+	mockProductRepo.On("Update", &rollbackProduct).Return(errors.New("rollback failed"))
+
+	order, err := usecase.Create(req)
+
+	assert.Error(t, err)
+	assert.Nil(t, order)
+	assert.Contains(t, err.Error(), "failed to create order")
+	// Should return the original error, not the rollback error
+	mockOrderRepo.AssertExpectations(t)
+	mockProductRepo.AssertExpectations(t)
+}
+
+func TestOrderUsecase_Create_RollbackGetProductError_StillAttemptsRollback(t *testing.T) {
+	mockOrderRepo := new(mockOrderRepository)
+	mockProductRepo := new(mockProductRepository)
+	usecase := NewOrderUsecase(mockOrderRepo, mockProductRepo)
+
+	productID := uuid.New()
+	product := &domain.Product{
+		ID:    productID,
+		Name:  "Test Product",
+		Price: 50.00,
+		Stock: 10,
+	}
+
+	req := &domain.CreateOrderRequest{
+		CustomerName:  "John Doe",
+		CustomerEmail: "john@example.com",
+		Items: []struct {
+			ProductID uuid.UUID `json:"product_id" binding:"required"`
+			Quantity  int       `json:"quantity" binding:"required,min=1"`
+		}{
+			{
+				ProductID: productID,
+				Quantity:  2,
+			},
+		},
+	}
+
+	// Mock product repository calls
+	mockProductRepo.On("GetByID", productID).Return(product, nil).Once()
+	updatedProduct := *product
+	updatedProduct.Stock = 8 // Stock reduced by 2
+	mockProductRepo.On("Update", &updatedProduct).Return(nil).Once()
+
+	// Mock order creation failure
+	mockOrderRepo.On("Create", mock.AnythingOfType("*domain.Order")).Return(errors.New("database error"))
+
+	// Mock rollback calls - simulate get product failure during rollback
+	mockProductRepo.On("GetByID", productID).Return(nil, errors.New("product not found during rollback")).Once()
+
+	order, err := usecase.Create(req)
+
+	assert.Error(t, err)
+	assert.Nil(t, order)
+	assert.Contains(t, err.Error(), "failed to create order")
+	mockOrderRepo.AssertExpectations(t)
+	mockProductRepo.AssertExpectations(t)
+}

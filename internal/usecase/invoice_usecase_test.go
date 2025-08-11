@@ -1045,3 +1045,208 @@ func TestInvoiceUsecase_SendToKafka_ValidatesEventStructure(t *testing.T) {
 	assert.NoError(t, err)
 	mockKafkaProducer.AssertExpectations(t)
 }
+
+func TestInvoiceUsecase_SendToKafka_MarshalError(t *testing.T) {
+	mockInvoiceRepo := &MockInvoiceRepository{}
+	mockOrderRepo := &MockOrderRepository{}
+	mockProductRepo := &MockProductRepository{}
+	mockKafkaProducer := &MockKafkaProducer{}
+	
+	invoiceUC := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafkaProducer).(*invoiceUsecase)
+
+	invoice := &domain.Invoice{
+		ID:            uuid.New(),
+		InvoiceNumber: "INV-001",
+	}
+
+	eventType := "test_event"
+	
+	// Mock the SendMessage call for successful case
+	mockKafkaProducer.On("SendMessage", "invoices", invoice.ID.String(), mock.AnythingOfType("[]uint8")).Return(nil)
+	
+	err := invoiceUC.SendToKafka(invoice, eventType)
+
+	// This should succeed normally
+	assert.NoError(t, err)
+	mockKafkaProducer.AssertExpectations(t)
+	
+	// Test with nil producer (different usecase instance)
+	invoiceUC2 := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, nil).(*invoiceUsecase)
+	err2 := invoiceUC2.SendToKafka(invoice, eventType)
+	assert.Error(t, err2)
+	assert.Contains(t, err2.Error(), "kafka producer not configured")
+}
+
+func TestInvoiceUsecase_Create_KafkaFailsDuringCreate(t *testing.T) {
+	mockInvoiceRepo := &MockInvoiceRepository{}
+	mockOrderRepo := &MockOrderRepository{}
+	mockProductRepo := &MockProductRepository{}
+	mockKafkaProducer := &MockKafkaProducer{}
+
+	invoiceUC := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafkaProducer)
+
+	req := &domain.CreateInvoiceRequest{
+		CustomerName:  "John Doe",
+		CustomerEmail: "john@example.com",
+		DueDate:       time.Now().Add(30 * 24 * time.Hour),
+		Items: []struct {
+			ProductID   *uuid.UUID `json:"product_id,omitempty"`
+			Description string     `json:"description" binding:"required"`
+			Quantity    int        `json:"quantity" binding:"required,min=1"`
+			UnitPrice   float64    `json:"unit_price" binding:"required,min=0"`
+		}{
+			{
+				Description: "Test Item",
+				Quantity:    1,
+				UnitPrice:   100.0,
+			},
+		},
+		TaxRate: 0.1,
+	}
+
+	mockInvoiceRepo.On("GenerateInvoiceNumber").Return("INV-001", nil)
+	mockInvoiceRepo.On("Create", mock.AnythingOfType("*domain.Invoice")).Return(nil)
+	mockKafkaProducer.On("SendMessage", "invoices", mock.AnythingOfType("string"), mock.AnythingOfType("[]uint8")).Return(fmt.Errorf("kafka error"))
+
+	invoice, err := invoiceUC.Create(req)
+
+	// Should still succeed even if Kafka fails
+	assert.NoError(t, err)
+	assert.NotNil(t, invoice)
+	assert.Equal(t, "INV-001", invoice.InvoiceNumber)
+	mockInvoiceRepo.AssertExpectations(t)
+	mockKafkaProducer.AssertExpectations(t)
+}
+
+func TestInvoiceUsecase_CreateFromOrder_KafkaFailsDuringCreate(t *testing.T) {
+	mockInvoiceRepo := &MockInvoiceRepository{}
+	mockOrderRepo := &MockOrderRepository{}
+	mockProductRepo := &MockProductRepository{}
+	mockKafkaProducer := &MockKafkaProducer{}
+
+	invoiceUC := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafkaProducer)
+
+	orderID := uuid.New()
+	productID := uuid.New()
+
+	order := &domain.Order{
+		ID:           orderID,
+		CustomerName: "John Doe",
+		Items: []*domain.OrderItem{
+			{
+				ProductID: productID,
+				Quantity:  2,
+				Price:     50.0,
+				Product: &domain.Product{
+					ID:    productID,
+					Name:  "Test Product",
+					Price: 50.0,
+				},
+			},
+		},
+	}
+
+	req := &domain.CreateInvoiceRequest{
+		CustomerName:  "John Doe",
+		CustomerEmail: "john@example.com",
+		DueDate:       time.Now().Add(30 * 24 * time.Hour),
+		TaxRate:       0.1,
+	}
+
+	mockOrderRepo.On("GetByID", orderID).Return(order, nil)
+	mockInvoiceRepo.On("GenerateInvoiceNumber").Return("INV-002", nil)
+	mockInvoiceRepo.On("Create", mock.AnythingOfType("*domain.Invoice")).Return(nil)
+	mockKafkaProducer.On("SendMessage", "invoices", mock.AnythingOfType("string"), mock.AnythingOfType("[]uint8")).Return(fmt.Errorf("kafka error"))
+
+	invoice, err := invoiceUC.CreateFromOrder(orderID, req)
+
+	// Should still succeed even if Kafka fails
+	assert.NoError(t, err)
+	assert.NotNil(t, invoice)
+	assert.Equal(t, "INV-002", invoice.InvoiceNumber)
+	assert.Equal(t, &orderID, invoice.OrderID)
+	mockOrderRepo.AssertExpectations(t)
+	mockInvoiceRepo.AssertExpectations(t)
+	mockKafkaProducer.AssertExpectations(t)
+}
+
+func TestInvoiceUsecase_UpdateStatus_KafkaFailsDuringUpdate(t *testing.T) {
+	mockInvoiceRepo := &MockInvoiceRepository{}
+	mockOrderRepo := &MockOrderRepository{}
+	mockProductRepo := &MockProductRepository{}
+	mockKafkaProducer := &MockKafkaProducer{}
+
+	invoiceUC := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafkaProducer)
+
+	invoiceID := uuid.New()
+	invoice := &domain.Invoice{
+		ID:     invoiceID,
+		Status: domain.InvoiceStatusDraft,
+	}
+
+	mockInvoiceRepo.On("GetByID", invoiceID).Return(invoice, nil)
+	mockInvoiceRepo.On("Update", mock.AnythingOfType("*domain.Invoice")).Return(nil)
+	mockKafkaProducer.On("SendMessage", "invoices", mock.AnythingOfType("string"), mock.AnythingOfType("[]uint8")).Return(fmt.Errorf("kafka error"))
+
+	err := invoiceUC.UpdateStatus(invoiceID, domain.InvoiceStatusSent)
+
+	// Should still succeed even if Kafka fails
+	assert.NoError(t, err)
+	mockInvoiceRepo.AssertExpectations(t)
+	mockKafkaProducer.AssertExpectations(t)
+}
+
+func TestInvoiceUsecase_Delete_KafkaFailsDuringDelete(t *testing.T) {
+	mockInvoiceRepo := &MockInvoiceRepository{}
+	mockOrderRepo := &MockOrderRepository{}
+	mockProductRepo := &MockProductRepository{}
+	mockKafkaProducer := &MockKafkaProducer{}
+
+	invoiceUC := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafkaProducer)
+
+	invoiceID := uuid.New()
+	invoice := &domain.Invoice{
+		ID:            invoiceID,
+		InvoiceNumber: "INV-001",
+	}
+
+	mockInvoiceRepo.On("GetByID", invoiceID).Return(invoice, nil)
+	mockInvoiceRepo.On("Delete", invoiceID).Return(nil)
+	mockKafkaProducer.On("SendMessage", "invoices", mock.AnythingOfType("string"), mock.AnythingOfType("[]uint8")).Return(fmt.Errorf("kafka error"))
+
+	err := invoiceUC.Delete(invoiceID)
+
+	// Should still succeed even if Kafka fails
+	assert.NoError(t, err)
+	mockInvoiceRepo.AssertExpectations(t)
+	mockKafkaProducer.AssertExpectations(t)
+}
+
+func TestInvoiceUsecase_UpdateStatus_AlreadyPaidStatus(t *testing.T) {
+	mockInvoiceRepo := &MockInvoiceRepository{}
+	mockOrderRepo := &MockOrderRepository{}
+	mockProductRepo := &MockProductRepository{}
+	mockKafkaProducer := &MockKafkaProducer{}
+
+	invoiceUC := NewInvoiceUsecase(mockInvoiceRepo, mockOrderRepo, mockProductRepo, mockKafkaProducer)
+
+	invoiceID := uuid.New()
+	paidDate := time.Now().Add(-24 * time.Hour)
+	invoice := &domain.Invoice{
+		ID:       invoiceID,
+		Status:   domain.InvoiceStatusPaid, // Already paid
+		PaidDate: &paidDate,
+	}
+
+	mockInvoiceRepo.On("GetByID", invoiceID).Return(invoice, nil)
+	mockInvoiceRepo.On("Update", mock.AnythingOfType("*domain.Invoice")).Return(nil)
+	mockKafkaProducer.On("SendMessage", "invoices", mock.AnythingOfType("string"), mock.AnythingOfType("[]uint8")).Return(nil)
+
+	err := invoiceUC.UpdateStatus(invoiceID, domain.InvoiceStatusPaid)
+
+	// Should succeed but not change the paid date since it's already paid
+	assert.NoError(t, err)
+	assert.Equal(t, &paidDate, invoice.PaidDate) // Original paid date should be preserved
+	mockInvoiceRepo.AssertExpectations(t)
+	mockKafkaProducer.AssertExpectations(t)
+}

@@ -474,3 +474,75 @@ func TestJWTClaims_Structure(t *testing.T) {
 	assert.NotNil(t, claims.ExpiresAt)
 	assert.NotNil(t, claims.IssuedAt)
 }
+
+func TestAuthUsecase_Register_LongPassword(t *testing.T) {
+	mockRepo := &MockUserRepository{}
+	jwtSecret := "test-secret"
+	authUC := NewAuthUsecase(mockRepo, jwtSecret).(*authUsecase)
+
+	// Test with a very long password that exceeds bcrypt's 72-byte limit
+	req := &domain.RegisterRequest{
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: string(make([]byte, 80)), // Very long password, should cause bcrypt error
+	}
+
+	mockRepo.On("GetByUsername", req.Username).Return(nil, fmt.Errorf("not found"))
+	mockRepo.On("GetByEmail", req.Email).Return(nil, fmt.Errorf("not found"))
+	// Don't expect Create to be called since password hashing should fail
+
+	user, err := authUC.Register(req)
+
+	// Should fail with bcrypt error
+	assert.Error(t, err)
+	assert.Nil(t, user)
+	assert.Contains(t, err.Error(), "failed to hash password")
+	mockRepo.AssertExpectations(t)
+}
+
+func TestAuthUsecase_Login_WithEmptySecret(t *testing.T) {
+	mockRepo := &MockUserRepository{}
+	jwtSecret := "" // Empty secret - this will still work but creates insecure tokens
+	authUC := NewAuthUsecase(mockRepo, jwtSecret).(*authUsecase)
+
+	hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.DefaultCost)
+	existingUser := &domain.User{
+		ID:       uuid.New(),
+		Username: "testuser",
+		Email:    "test@example.com",
+		Password: string(hashedPassword),
+	}
+
+	req := &domain.LoginRequest{
+		Username: "testuser",
+		Password: "password123",
+	}
+
+	mockRepo.On("GetByUsername", req.Username).Return(existingUser, nil)
+
+	response, err := authUC.Login(req)
+
+	// Should actually succeed even with empty secret (just insecure)
+	assert.NoError(t, err)
+	assert.NotNil(t, response)
+	assert.NotEmpty(t, response.Token)
+	mockRepo.AssertExpectations(t)
+}
+
+
+func TestAuthUsecase_GenerateToken_EmptySecret(t *testing.T) {
+	mockRepo := &MockUserRepository{}
+	jwtSecret := "" // Empty secret
+	authUC := NewAuthUsecase(mockRepo, jwtSecret).(*authUsecase)
+
+	user := &domain.User{
+		ID:       uuid.New(),
+		Username: "testuser",
+	}
+
+	token, err := authUC.GenerateToken(user)
+
+	// Empty secret should still work for signing, just not secure
+	assert.NoError(t, err)
+	assert.NotEmpty(t, token)
+}
